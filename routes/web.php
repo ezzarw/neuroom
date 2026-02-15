@@ -9,3 +9,4 @@ Route::get('/', function () {
 Route::get('/auth-test', function () {
     return view('auth-test');
 });
+

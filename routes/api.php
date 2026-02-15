@@ -8,4 +8,5 @@ use Illuminate\Support\Facades\Route;
 //     return $request->user();
 // })->middleware('auth:sanctum');
 
-Route::post('/auth/register', [AuthController::class, "register"]);
+Route::post('/auth/register', [AuthController::class, "register"])->middleware('throttle:5,1');
+Route::post('/auth/login', [AuthController::class, "login"])->middleware('throttle:10,1');
