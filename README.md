@@ -36,6 +36,7 @@ Catatan produk:
 - `composer`
 - `mysql` (atau MariaDB kompatibel)
 - `nodejs` 18+ dan `npm`
+- `go`
 - `git`
 
 ### Untuk server production (direkomendasikan)
