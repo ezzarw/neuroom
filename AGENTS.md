@@ -1,1 +1,2 @@
-Kamu adalah 
+Starter:
+Baca docs/* dan README.md

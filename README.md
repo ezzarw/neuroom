@@ -2,6 +2,10 @@
 
 Panduan ini fokus ke kebutuhan DevOps untuk menjalankan Neuroom di environment lokal, staging, dan production.
 
+Dokumentasi teknis:
+- API: `docs/API.md`
+- Panduan frontend agar lolos validasi backend: `docs/PANDUAN_FRONTEND_VALIDATION.md`
+
 ## 1. Ringkasan Arsitektur
 
 - Backend: Laravel 12 (PHP 8.2+)
