@@ -1,0 +1,174 @@
+/* RESET */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: "Segoe UI", system-ui, sans-serif;
+}
+
+body {
+  background: #F8F6F2;
+  color: #2F3E3E;
+  line-height: 1.7;
+}
+
+
+/* NAVBAR */
+.navbar {
+  background: #5FA8A3;
+  padding: 20px 0 ;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.nav-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.logo {
+  color: #fff;
+  font-size: 24px;
+  font-weight: 700;
+}
+.nav-menu {
+  list-style: none;
+  display: flex;
+  gap: 24px;
+}
+
+.nav-menu a {
+  text-decoration: none;
+  color: #fff;
+  font-weight: 500;
+}
+
+.nav-menu a:hover {
+  color: #2F3E3E ;
+}
+
+/* CONTAINER */
+.container {
+  width: 90%;
+  max-width: 1100px;
+  margin: auto;
+}
+
+/* SECTION */
+.choose-section {
+    min-height: 100vh;
+    padding: 80px 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+/* HEADLINE */
+.headline {
+    font-size: 2.4rem;
+    font-weight: 700;
+    margin-bottom: 12px;
+    text-align: center;
+}
+
+.subtitle {
+    font-size: 1rem;
+    color: #5a6f6f;
+    margin-bottom: 50px;
+    text-align: center;
+}
+
+/* CARD WRAPPER */
+.card-wrapper {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 24px;
+    width: 100%;
+    max-width: 900px;
+}
+/* CARD */
+.card {
+    background-color: #ffffff;
+    border-radius: 16px;
+    padding: 32px;
+    text-decoration: none;
+    color: inherit;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.06);
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+/* Overlay effect */
+.card::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-color: #5FA8A3;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    z-index: 1;
+}
+
+/* Konten di atas overlay */
+.card > * {
+    position: relative;
+    z-index: 2;
+}
+
+/* Hover card naik */
+.card:hover {
+    transform: translateY(-6px);
+}
+
+/* Hover overlay muncul */
+.card:hover::before {
+    opacity: 0.06;
+}
+/* CTA jadi button */
+.cta {
+    display: inline-block;
+    padding: 10px 18px;
+    background: #5FA8A3;
+    color: white;
+    font-weight: 600;
+    border-radius: 10px;
+    transition: all 0.25s ease;
+    margin-top: 10px;
+}
+
+/* Hover button */
+.card:hover .cta {
+    background: #2F3E3E;
+    color: white;
+}
+
+/* Klik ditekan */
+.cta:active {
+    transform: scale(0.95);
+    background: #1f2a2a;
+}
+
+
+/* HOVER */
+.card:hover {
+    transform: translateY(-6px);
+}
+
+/* IMAGE DI CARD */
+.card-img {
+    width: 100% ;
+    max-height: 189px;
+    object-fit: cover;
+    border-radius: 12px;
+    margin-bottom: 18px;
+    transition: transform 0.3s ease;
+}
+
+/* Hover gambar ikut zoom dikit */
+.card:hover .card-img {
+    transform: scale(1.05);
+}
+
