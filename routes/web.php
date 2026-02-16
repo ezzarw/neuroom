@@ -11,3 +11,8 @@ Route::get('/belajar', function () {
 Route::get('/pomodoro', function () {
     return view('pomodoro');
 });
+
+Route::get('/auth-test', function () {
+    return view('auth-test');
+});
+
