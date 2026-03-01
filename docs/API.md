@@ -1,18 +1,42 @@
 # Dokumentasi API Neuroom
 
-Dokumen ini disusun dari implementasi source code terbaru.
+Dokumen ini mengikuti implementasi route dan controller terbaru.
 
 ## Ringkasan
 
 - Base path API: `/api`
 - Format request/response: JSON
-- Auth: Laravel Sanctum Bearer Token
+- Auth private endpoint: Laravel Sanctum Bearer Token
 - Endpoint aktif:
   - `POST /api/auth/register`
   - `POST /api/auth/login`
+  - `GET /api/admin/user-view`
+  - `POST /api/admin/user-add`
+  - `PUT /api/admin/user-edit`
+  - `DELETE /api/admin/user-delete`
+- Middleware admin endpoint:
+  - `auth:sanctum`
+  - `admin.validate`
 - Rate limit:
   - Register: `5 request / menit`
   - Login: `10 request / menit`
+
+## Header Request
+
+### Endpoint Public (`/api/auth/*`)
+
+```http
+Content-Type: application/json
+Accept: application/json
+```
+
+### Endpoint Admin (`/api/admin/*`)
+
+```http
+Content-Type: application/json
+Accept: application/json
+Authorization: Bearer <token>
+```
 
 ## 1) Register
 
@@ -27,16 +51,6 @@ Dokumen ini disusun dari implementasi source code terbaru.
 | `username` | string | Ya | `required`, `string`, `max:100` |
 | `email` | string | Ya | `required`, `string`, `email`, `max:100`, `unique:authentications,email` |
 | `password` | string | Ya | `required`, `string`, `min:8` |
-
-Contoh request:
-
-```json
-{
-  "username": "budi",
-  "email": "budi@example.com",
-  "password": "rahasia123"
-}
-```
 
 ### Response Sukses
 
@@ -54,15 +68,11 @@ Status code: `201 Created`
 }
 ```
 
-Catatan:
-- Nilai `username` di response adalah username unik hasil proses binary `go/bin/suffix_username`.
-- Password tidak pernah dikembalikan dalam response.
-
 ### Response Error
 
 - `422 Unprocessable Entity`: validasi gagal.
 - `429 Too Many Requests`: terkena rate limit.
-- `500 Internal Server Error`: proses binary gagal (`go/bin/suffix_username` atau `go/bin/hashingbcry`).
+- `500 Internal Server Error`: proses binary gagal.
 
 ## 2) Login
 
@@ -76,15 +86,6 @@ Catatan:
 |---|---|---|---|
 | `email` | string | Ya | `required`, `string`, `email`, `max:100` |
 | `password` | string | Ya | `required`, `string` |
-
-Contoh request:
-
-```json
-{
-  "email": "budi@example.com",
-  "password": "rahasia123"
-}
-```
 
 ### Response Sukses
 
@@ -104,36 +105,118 @@ Status code: `200 OK`
 
 ### Response Error
 
-- `401 Unauthorized`: kredensial tidak valid (`Invalid credentials`).
+- `401 Unauthorized`: kredensial tidak valid.
 - `422 Unprocessable Entity`: validasi gagal.
 - `429 Too Many Requests`: terkena rate limit.
-- `500 Internal Server Error`: proses verifikasi password via binary gagal.
+- `500 Internal Server Error`: proses verifikasi password gagal.
 
-## Format Header Untuk Endpoint Private
+## 3) Admin - User View
 
-Jika nanti ada endpoint private dengan middleware `auth:sanctum`, kirim header:
+- Method: `GET`
+- URL: `/api/admin/user-view`
+- Middleware: `auth:sanctum`, `admin.validate`
 
-```http
-Authorization: Bearer <token>
-Accept: application/json
+### Response Sukses
+
+Status code: `200 OK`
+
+```json
+{
+  "status": true,
+  "data": [
+    {
+      "id": 1,
+      "username": "budi_abc123",
+      "display_name": "budi",
+      "email": "budi@example.com",
+      "is_admin": 0
+    }
+  ]
+}
 ```
 
-## Contoh cURL
+## 4) Admin - User Add
 
-Register:
+- Method: `POST`
+- URL: `/api/admin/user-add`
+- Middleware: `auth:sanctum`, `admin.validate`
 
-```bash
-curl -X POST http://localhost:8000/api/auth/register \
-  -H "Content-Type: application/json" \
-  -H "Accept: application/json" \
-  -d '{"username":"budi","email":"budi@example.com","password":"rahasia123"}'
+### Request Body
+
+| Field | Tipe | Wajib | Rule |
+|---|---|---|---|
+| `username` | string | Ya | `required`, `string`, `max:100` |
+| `email` | string | Ya | `required`, `string`, `email`, `max:100`, `unique:authentications,email` |
+| `password` | string | Ya | `required`, `string`, `min:8` |
+
+### Response Sukses
+
+Status code: `201 Created`
+
+```json
+{
+  "status": true,
+  "data": {
+    "email": "budi@example.com",
+    "username": "budi_abc123"
+  },
+  "token": "3|zzzzz",
+  "token_type": "Bearer"
+}
 ```
 
-Login:
+## 5) Admin - User Edit
 
-```bash
-curl -X POST http://localhost:8000/api/auth/login \
-  -H "Content-Type: application/json" \
-  -H "Accept: application/json" \
-  -d '{"email":"budi@example.com","password":"rahasia123"}'
+- Method: `PUT`
+- URL: `/api/admin/user-edit`
+- Middleware: `auth:sanctum`, `admin.validate`
+
+### Request Body
+
+| Field | Tipe | Wajib | Rule |
+|---|---|---|---|
+| `id` | integer | Ya | `required`, `integer`, `exists:authentications,id` |
+| `displayName` | string | Ya | `required`, `string`, `max:100` |
+| `email` | string | Ya | `required`, `string`, `email`, `max:100`, `unique (ignore id sendiri)` |
+| `isAdmin` | integer | Ya | `required`, `integer`, `in:0,1` |
+| `password` | string/null | Tidak | `nullable`, `string`, `min:8` |
+
+### Response Sukses
+
+Status code: `200 OK`
+
+```json
+{
+  "status": true,
+  "data": {
+    "id": 1,
+    "username": "budi_abc123",
+    "email": "budi@example.com",
+    "is_admin": 1
+  }
+}
 ```
+
+Catatan:
+- Jika `password` diubah, token lama user akan dihapus (revoke).
+
+## 6) Admin - User Delete
+
+- Method: `DELETE`
+- URL: `/api/admin/user-delete`
+- Middleware: `auth:sanctum`, `admin.validate`
+
+### Request Body
+
+| Field | Tipe | Wajib | Rule |
+|---|---|---|---|
+| `id` | integer | Ya | `required`, `integer`, `exists:authentications,id` |
+
+Catatan:
+- Karena FK memakai `cascadeOnDelete`, data terkait di tabel `users` akan ikut terhapus.
+
+## Error Umum Endpoint Admin
+
+- `401 Unauthorized`: token tidak ada/tidak valid.
+- `403 Forbidden`: user login tapi bukan admin (`is_admin != 1`).
+- `422 Unprocessable Entity`: payload tidak lolos validasi.

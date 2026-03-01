@@ -51,6 +51,7 @@ class AuthController extends Controller
             $auth = Authentication::create([
                 'username' => $unique_username,
                 'email' => $email,
+                'is_admin' => 0,
                 'password' => $hashed_password,
             ]);
 
