@@ -186,55 +186,149 @@
         </div>
     </div>
 
+<script>
+  const registerForm = document.getElementById('register-form');
+  const registerResult = document.getElementById('register-result');
 
-    <script>
-        const registerForm = document.getElementById('register-form');
-        const registerResult = document.getElementById('register-result');
+  const loginForm = document.querySelector('#login-popup form');
+  const loginResult = document.getElementById('login-result') || (() => {
+    const el = document.createElement('div');
+    el.id = 'login-result';
+    el.style.marginTop = '10px';
+    el.style.fontSize = '14px';
+    loginForm.parentElement.insertBefore(el, loginForm.nextSibling);
+    return el;
+  })();
 
-        async function postJson(url, payload) {
-            const res = await fetch(url, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(payload),
-            });
-            let data = null;
-            try {
-                data = await res.json();
-            } catch (e) {}
-            return {
-                ok: res.ok,
-                status: res.status,
-                data
-            };
-        }
+  async function requestJson(url, method, payload = null, token = null) {
+    const headers = {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+    };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
 
-        registerForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            registerResult.textContent = 'Loading...';
+    const res = await fetch(url, {
+      method,
+      headers,
+      body: payload ? JSON.stringify(payload) : null,
+    });
 
-            if (registerForm.password.value !== registerForm.password_confirmation.value) {
-                alert("Password dan konfirmasi tidak sama");
-                return;
-            }
+    let data = null;
+    try { data = await res.json(); } catch (e) {}
 
-            const payload = {
-                username: registerForm.fullname.value.trim(),
-                email: registerForm.email.value.trim(),
-                password: registerForm.password.value
-            };
+    return { ok: res.ok, status: res.status, data };
+  }
 
-            const {
-                ok,
-                status,
-                data
-            } = await postJson('/api/auth/register', payload);
-            registerResult.textContent = ok ?
-                'Register berhasil' :
-                (data?.message || `Register gagal (HTTP ${status})`);
-        });
-    </script>
+  function firstValidationError(data) {
+    if (!data?.errors) return null;
+    const flat = Object.values(data.errors).flat();
+    return flat?.[0] || null;
+  }
+
+  // -------- REGISTER (POST /api/auth/register) --------
+  registerForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    registerResult.textContent = 'Loading...';
+
+    if (registerForm.password.value !== registerForm.password_confirmation.value) {
+      registerResult.textContent = '';
+      alert("Password dan konfirmasi tidak sama");
+      return;
+    }
+
+    // sesuai dokumentasi: username, email, password
+    const payload = {
+      username: registerForm.fullname.value.trim(), // map fullname -> username ✅
+      email: registerForm.email.value.trim(),
+      password: registerForm.password.value
+    };
+
+    const { ok, status, data } = await requestJson('/api/auth/register', 'POST', payload);
+
+    if (ok && data?.status === true) {
+      // response sukses: { status:true, data:{...}, token:"...", token_type:"Bearer" }
+      if (data?.token) {
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('token_type', data.token_type || 'Bearer');
+      }
+
+      registerResult.textContent = 'Register berhasil ✅ Silakan login.';
+      window.location.hash = '#login-popup';
+      registerForm.reset();
+      return;
+    }
+
+    if (status === 422) {
+      registerResult.textContent = firstValidationError(data) || data?.message || 'Validasi gagal (422)';
+      return;
+    }
+    if (status === 429) {
+      registerResult.textContent = 'Terlalu banyak request. Coba lagi sebentar ya (429).';
+      return;
+    }
+
+    registerResult.textContent = data?.message || `Register gagal (HTTP ${status})`;
+  });
+
+  // -------- LOGIN (POST /api/auth/login) --------
+  loginForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    loginResult.textContent = 'Loading...';
+
+    const emailEl = loginForm.querySelector('input[type="email"]');
+    const passEl = loginForm.querySelector('input[type="password"]');
+
+    const payload = {
+      email: (emailEl?.value || '').trim(),
+      password: passEl?.value || ''
+    };
+
+    const { ok, status, data } = await requestJson('/api/auth/login', 'POST', payload);
+
+    if (ok && data?.status === true) {
+      // response sukses: { status:true, data:{...}, token:"...", token_type:"Bearer" }
+      localStorage.setItem('token', data.token);
+      localStorage.setItem('token_type', data.token_type || 'Bearer');
+
+      loginResult.textContent = 'Login berhasil ✅ Token tersimpan.';
+      window.location.hash = '#'; // tutup popup
+
+      // optional redirect
+      // window.location.href = '/belajar';
+      return;
+    }
+
+    if (status === 401) {
+      loginResult.textContent = data?.message || 'Email / password salah (401).';
+      return;
+    }
+    if (status === 422) {
+      loginResult.textContent = firstValidationError(data) || data?.message || 'Validasi gagal (422)';
+      return;
+    }
+    if (status === 429) {
+      loginResult.textContent = 'Terlalu banyak percobaan login. Coba lagi sebentar ya (429).';
+      return;
+    }
+
+    loginResult.textContent = data?.message || `Login gagal (HTTP ${status})`;
+  });
+
+  // -------- TEST admin endpoint (GET /api/admin/user-view) --------
+  // panggil di console: testAdminUserView()
+  window.testAdminUserView = async function () {
+    const token = localStorage.getItem('token');
+    const tokenType = localStorage.getItem('token_type') || 'Bearer';
+    if (!token) {
+      console.warn('Token belum ada. Login dulu ya.');
+      return { ok: false, status: 0, data: { message: 'Token belum ada' } };
+    }
+    const res = await requestJson('/api/admin/user-view', 'GET', null, token);
+    console.log('Admin user-view response:', res);
+    return res;
+  };
+</script>
+
 </body>
 
 </html>

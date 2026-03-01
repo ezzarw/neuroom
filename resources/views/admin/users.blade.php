@@ -32,7 +32,9 @@
 
         <div class="header">
             <h1>Users Management</h1>
-            <button class="btn-cta">+ Tambah User</button>
+
+            {{-- Route create belum ada di web.php, jadi sementara button biasa --}}
+            <button type="button" class="btn-cta">+ Tambah User</button>
         </div>
 
         <section class="table-card">
@@ -42,36 +44,43 @@
                 <table>
                     <thead>
                         <tr>
-                            <th style="width:25%">Name</th>
-                            <th style="width:30%">Email</th>
-                            <th style="width:20%">Password</th>
-                            <th style="width:25%">Aksi</th>
+                            <th style="width:6%">ID</th>
+                            <th style="width:12%">Username</th>
+                            <th style="width:14%">Display Name</th>
+                            <th style="width:14%">Email</th>
+                            <th style="width:10%">Admin</th>
+                            <th style="width:12%">Created At</th>
+                            <th style="width:12%">Auth Updated</th>
+                            <th style="width:12%">Updated At</th>
+                            <th style="width:10%">Aksi</th>
                         </tr>
                     </thead>
 
                     <tbody>
+                        @forelse ($users ?? [] as $user)
+                            <tr>
+                                <td>{{ $user->id }}</td>
+                                <td>{{ $user->uusername }}</td>
+                                <td>{{ $user->display_name }}</td>
+                                <td>{{ $user->email }}</td>
+                                <td>{{ $user->is_admin ? 'Ya' : 'Tidak' }}</td>
+                                <td>{{ $user->users_created_at }}</td>
+                                <td>{{ $user->auth_update_at }}</td>
+                                <td>{{ $user->users_update_at }}</td>
 
-                        {{-- Dummy sementara ya zar (nanti backend ganti) --}}
-                        <tr>
-                            <td>Anisa</td>
-                            <td>anisa@email.com</td>
-                            <td>********</td>
-                            <td class="actions">
-                                <button class="btn-edit">Edit</button>
-                                <button class="btn-delete">Hapus</button>
-                            </td>
-                        </tr>
-
-                        <tr>
-                            <td>Rahmat</td>
-                            <td>rahmat@email.com</td>
-                            <td>********</td>
-                            <td class="actions">
-                                <button class="btn-edit">Edit</button>
-                                <button class="btn-delete">Hapus</button>
-                            </td>
-                        </tr>
-
+                                <td class="actions">
+                                    {{-- Route edit/delete belum ada di web.php, jadi sementara button biasa --}}
+                                    <button type="button" class="btn-edit">Edit</button>
+                                    <button type="button" class="btn-delete">Hapus</button>
+                                </td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="9" style="text-align:center;">
+                                    Belum ada data user.
+                                </td>
+                            </tr>
+                        @endforelse
                     </tbody>
                 </table>
             </div>

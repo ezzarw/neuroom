@@ -24,7 +24,7 @@ class AuthController extends Controller
         $email = $request->email;
 
         // making username unique
-        $bin = base_path('go/bin/suffix_username'); // biar absolute anjaymanjay
+        $bin = $this->resolveGoBinary('suffix_username');
         $process = new Process([$bin, $natural_username]); // arg dipisah agar aman
         $process->setTimeout(3);
         $process->run();
@@ -36,7 +36,7 @@ class AuthController extends Controller
         $unique_username = trim($process->getOutput(), "\n");
 
         // password hashing
-        $bin = base_path('go/bin/hashingbcry');
+        $bin = $this->resolveGoBinary('hashingbcry');
         $process = new Process([$bin, '-e', str($natural_password)]);
         $process->setTimeout(4);
         $process->run();
@@ -96,7 +96,7 @@ class AuthController extends Controller
         }
 
         // password hashing
-        $bin = base_path('go/bin/hashingbcry');
+        $bin = $this->resolveGoBinary('hashingbcry');
         $process = new Process([$bin, '-v', $password, $password_from_db]);
         $process->setTimeout(4);
         $process->run();
