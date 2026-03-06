@@ -7,12 +7,29 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
-use Symfony\Component\Process\Process;
-
-use function PHPUnit\Framework\isNull;
 
 class AdminController extends Controller
 {
+    public function usersPage()
+    {
+        $users = Authentication::query()
+            ->leftJoin('users', 'authentications.username', '=', 'users.username')
+            ->select(
+                'authentications.id',
+                'authentications.username',
+                'users.display_name',
+                'authentications.email',
+                'authentications.is_admin',
+                'users.created_at',
+                'authentications.updated_at as auth_updated_at',
+                'users.updated_at'
+            )
+            ->orderBy('authentications.id')
+            ->get();
+
+        return view('admin.users', ['users' => $users]);
+    }
+
     public function user_add(Request $request)
     {
         $request->validate([
@@ -27,8 +44,8 @@ class AdminController extends Controller
         $email = $request->email;
 
         // making username unique
-        $bin = $this->resolveGoBinary('suffix_username');
-        $process = new Process([$bin, $natural_username]); // arg dipisah agar aman
+        $bin = base_path('go\bin\win\suffix_username.exe');
+        $process = $this->goProcess([$bin, $natural_username]); // arg dipisah agar aman
         $process->setTimeout(3);
         $process->run();
         // rajin rajin taruh log, biar gampang debugging
@@ -36,18 +53,18 @@ class AdminController extends Controller
             logger()->error('ada kesalahan pada binary suffix_username', ['err' => $process->getErrorOutput()]);
             abort(500, 'Internal error');
         }
-        $unique_username = trim($process->getOutput(), "\n");
+        $unique_username = trim($process->getOutput());
 
         // password hashing
-        $bin = $this->resolveGoBinary('hashingbcry');
-        $process = new Process([$bin, '-e', str($natural_password)]);
+        $bin = base_path('go\bin\win\hashingbcry.exe');
+        $process = $this->goProcess([$bin, '-e', $natural_password]);
         $process->setTimeout(4);
         $process->run();
         if ($process->isSuccessful() == false) {
             logger()->error('ada kesalahan pada hashingbcry', ['err' => $process->getErrorOutput()]);
             abort(500, 'Internal Error');
         }
-        $hashed_password = trim($process->getOutput(), "\n");
+        $hashed_password = trim($process->getOutput());
 
         // Simpan auth + profile dalam satu transaksi agar tidak setengah jadi.
         $auth = DB::transaction(function () use ($unique_username, $email, $hashed_password, $display_name) {
@@ -113,16 +130,16 @@ class AdminController extends Controller
         $is_admin = $validated['isAdmin'];
 
         // password hashing
-        if (! isNull($natural_password)) {
-            $bin = $this->resolveGoBinary('hashingbcry');
-            $process = new Process([$bin, '-e', str($natural_password)]);
+        if (! is_null($natural_password)) {
+            $bin = base_path('go\bin\win\hashingbcry.exe');
+            $process = $this->goProcess([$bin, '-e', $natural_password]);
             $process->setTimeout(4);
             $process->run();
             if ($process->isSuccessful() == false) {
                 logger()->error('ada kesalahan pada hashingbcry', ['err' => $process->getErrorOutput()]);
                 abort(500, 'Internal Error');
             }
-            $password = trim($process->getOutput(), "\n");
+            $password = trim($process->getOutput());
         } else {
             $password = null;
         }
@@ -130,7 +147,7 @@ class AdminController extends Controller
         // masukin ke database
         $auth = DB::transaction(function () use ($id, $display_name, $email, $password, $is_admin) {
             $auth = Authentication::query()->findOrFail($id);
-            if (isNull($password)) {
+            if (is_null($password)) {
                 $auth->update([
                     'email' => $email,
                     'is_admin' => $is_admin,
@@ -147,7 +164,7 @@ class AdminController extends Controller
                 'display_name' => $display_name,
             ]);
 
-            if (! isNull($password)) {
+            if (! is_null($password)) {
                 $auth->tokens()->delete();
             }
 
@@ -160,13 +177,19 @@ class AdminController extends Controller
         ], 200);
     }
 
-    public function user_delete(Request $request) {
+    public function user_delete(Request $request)
+    {
         $validated = $request->validate([
             'id' => ['required', 'integer', 'exists:authentications,id'],
         ]);
         $id = $validated['id'];
 
         $auth = Authentication::query()->findOrFail($id);
-        $auth->delete($id);
+        $auth->delete();
+
+        return response()->json([
+            'status' => true,
+            'message' => 'User berhasil dihapus.',
+        ], 200);
     }
 }

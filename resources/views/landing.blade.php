@@ -185,7 +185,6 @@
             </p>
         </div>
     </div>
-
 <script>
   const registerForm = document.getElementById('register-form');
   const registerResult = document.getElementById('register-result');
@@ -200,22 +199,20 @@
     return el;
   })();
 
-  async function requestJson(url, method, payload = null, token = null) {
-    const headers = {
-      'Content-Type': 'application/json',
-      'Accept': 'application/json',
-    };
-    if (token) headers['Authorization'] = `Bearer ${token}`;
-
+  // ✅ Sanctum SPA: selalu include cookies (session) + CSRF
+  async function requestJson(url, method, payload = null) {
     const res = await fetch(url, {
       method,
-      headers,
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+      credentials: 'include', // ✅ penting
       body: payload ? JSON.stringify(payload) : null,
     });
 
     let data = null;
     try { data = await res.json(); } catch (e) {}
-
     return { ok: res.ok, status: res.status, data };
   }
 
@@ -223,6 +220,11 @@
     if (!data?.errors) return null;
     const flat = Object.values(data.errors).flat();
     return flat?.[0] || null;
+  }
+
+  // Helper: ambil CSRF cookie (wajib sebelum request yang butuh CSRF/session)
+  async function ensureCsrfCookie() {
+    await fetch('/sanctum/csrf-cookie', { credentials: 'include' });
   }
 
   // -------- REGISTER (POST /api/auth/register) --------
@@ -236,22 +238,17 @@
       return;
     }
 
-    // sesuai dokumentasi: username, email, password
     const payload = {
-      username: registerForm.fullname.value.trim(), // map fullname -> username ✅
+      username: registerForm.fullname.value.trim(),
       email: registerForm.email.value.trim(),
       password: registerForm.password.value
     };
 
+    await ensureCsrfCookie();
+
     const { ok, status, data } = await requestJson('/api/auth/register', 'POST', payload);
 
     if (ok && data?.status === true) {
-      // response sukses: { status:true, data:{...}, token:"...", token_type:"Bearer" }
-      if (data?.token) {
-        localStorage.setItem('token', data.token);
-        localStorage.setItem('token_type', data.token_type || 'Bearer');
-      }
-
       registerResult.textContent = 'Register berhasil ✅ Silakan login.';
       window.location.hash = '#login-popup';
       registerForm.reset();
@@ -283,18 +280,37 @@
       password: passEl?.value || ''
     };
 
+    await ensureCsrfCookie();
+
     const { ok, status, data } = await requestJson('/api/auth/login', 'POST', payload);
 
     if (ok && data?.status === true) {
-      // response sukses: { status:true, data:{...}, token:"...", token_type:"Bearer" }
-      localStorage.setItem('token', data.token);
-      localStorage.setItem('token_type', data.token_type || 'Bearer');
-
-      loginResult.textContent = 'Login berhasil ✅ Token tersimpan.';
+      if (data?.token) {
+        localStorage.setItem('auth_token', data.token);
+        localStorage.setItem('token', data.token);
+      }
+      if (data?.data?.username) {
+        localStorage.setItem('auth_username', data.data.username);
+        localStorage.setItem('username', data.data.username);
+      }
+      if (data?.data?.id) {
+        localStorage.setItem('auth_id', String(data.data.id));
+      }
+      if (data?.data?.is_admin !== undefined && data?.data?.is_admin !== null) {
+        localStorage.setItem('auth_is_admin', String(data.data.is_admin));
+      }
+      if (data?.data?.email) {
+        localStorage.setItem('auth_email', data.data.email);
+        localStorage.setItem('email', data.data.email);
+      }
+      loginResult.textContent = 'Login berhasil ✅';
       window.location.hash = '#'; // tutup popup
 
-      // optional redirect
-      // window.location.href = '/belajar';
+      alert('Login berhasil ✅ Selamat datang!');
+      const isAdmin = Number(data?.data?.is_admin ?? 0) === 1;
+      window.location.href = isAdmin
+        ? "{{ route('admin.dashboard') }}?login=success"
+        : "{{ route('utama') }}?login=success";
       return;
     }
 
@@ -314,20 +330,11 @@
     loginResult.textContent = data?.message || `Login gagal (HTTP ${status})`;
   });
 
-  // -------- TEST admin endpoint (GET /api/admin/user-view) --------
-  // panggil di console: testAdminUserView()
-  window.testAdminUserView = async function () {
-    const token = localStorage.getItem('token');
-    const tokenType = localStorage.getItem('token_type') || 'Bearer';
-    if (!token) {
-      console.warn('Token belum ada. Login dulu ya.');
-      return { ok: false, status: 0, data: { message: 'Token belum ada' } };
-    }
-    const res = await requestJson('/api/admin/user-view', 'GET', null, token);
-    console.log('Admin user-view response:', res);
-    return res;
-  };
+  // NOTE:
+  // Session Sanctum tetap dipakai (credentials include), dan token juga disimpan
+  // agar endpoint admin berbasis Bearer tetap bisa dipanggil dari halaman admin.
 </script>
+
 
 </body>
 

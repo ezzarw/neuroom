@@ -13,6 +13,7 @@ class Authentication extends Authenticatable
     protected $fillable = [
         'username',
         'email',
+        'is_admin',
         'password'
     ];
 }
