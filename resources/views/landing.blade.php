@@ -11,6 +11,17 @@
 </head>
 
 <body>
+    @if (session('success'))
+        <div style="max-width: 1100px; margin: 16px auto 0; padding: 12px 16px; border-radius: 12px; background: #dcfce7; color: #166534; font-weight: 600;">
+            {{ session('success') }}
+        </div>
+    @endif
+
+    @if ($errors->any() && ! session('auth_popup'))
+        <div style="max-width: 1100px; margin: 16px auto 0; padding: 12px 16px; border-radius: 12px; background: #fee2e2; color: #991b1b; font-weight: 600;">
+            {{ $errors->first() }}
+        </div>
+    @endif
 
     <!-- NAVBAR -->
     <nav class="navbar">
@@ -149,10 +160,17 @@
             <h2>Masuk</h2>
             <p class="popup-desc">Masuk untuk mulai belajar lebih fokus</p>
 
-            <form>
-                <input type="email" placeholder="Email" required>
-                <input type="password" placeholder="Password" required>
-                <button class="btn-primary full">Login</button>
+            @if ($errors->has('login'))
+                <div style="margin-bottom: 12px; padding: 10px 12px; border-radius: 10px; background: #fee2e2; color: #991b1b; font-size: 14px;">
+                    {{ $errors->first('login') }}
+                </div>
+            @endif
+
+            <form method="POST" action="/auth/login">
+                @csrf
+                <input type="email" placeholder="Email" name="email" value="{{ old('email') }}" required>
+                <input type="password" placeholder="Password" name="password" required>
+                <button type="submit" class="btn-primary full">Login</button>
             </form>
 
             <p class="popup-footer">
@@ -170,14 +188,19 @@
             <h2>Daftar</h2>
             <p class="popup-desc">Buat akun untuk mulai belajar</p>
 
-            <form id="register-form">
-                <input type="text" placeholder="Nama Lengkap" name="fullname" required>
-                <input type="email" placeholder="Email" name="email" required>
+            @if ($errors->has('register') || $errors->has('username') || $errors->has('email') || $errors->has('password'))
+                <div style="margin-bottom: 12px; padding: 10px 12px; border-radius: 10px; background: #fee2e2; color: #991b1b; font-size: 14px;">
+                    {{ $errors->first('register') ?: $errors->first('username') ?: $errors->first('email') ?: $errors->first('password') }}
+                </div>
+            @endif
+
+            <form method="POST" action="/auth/register">
+                @csrf
+                <input type="text" placeholder="Nama Lengkap" name="username" value="{{ old('username') }}" required>
+                <input type="email" placeholder="Email" name="email" value="{{ old('email') }}" required>
                 <input type="password" placeholder="Password" name="password" required>
-                <input type="password" placeholder="Konfirmasi Password" name="password_confirmation" required>
-                <button class="btn-primary full">Daftar</button>
+                <button type="submit" class="btn-primary full">Daftar</button>
             </form>
-            <div id="register-result"></div>
 
             <p class="popup-footer">
                 Sudah punya akun?
@@ -185,155 +208,11 @@
             </p>
         </div>
     </div>
-<script>
-  const registerForm = document.getElementById('register-form');
-  const registerResult = document.getElementById('register-result');
-
-  const loginForm = document.querySelector('#login-popup form');
-  const loginResult = document.getElementById('login-result') || (() => {
-    const el = document.createElement('div');
-    el.id = 'login-result';
-    el.style.marginTop = '10px';
-    el.style.fontSize = '14px';
-    loginForm.parentElement.insertBefore(el, loginForm.nextSibling);
-    return el;
-  })();
-
-  // ✅ Sanctum SPA: selalu include cookies (session) + CSRF
-  async function requestJson(url, method, payload = null) {
-    const res = await fetch(url, {
-      method,
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-      },
-      credentials: 'include', // ✅ penting
-      body: payload ? JSON.stringify(payload) : null,
-    });
-
-    let data = null;
-    try { data = await res.json(); } catch (e) {}
-    return { ok: res.ok, status: res.status, data };
-  }
-
-  function firstValidationError(data) {
-    if (!data?.errors) return null;
-    const flat = Object.values(data.errors).flat();
-    return flat?.[0] || null;
-  }
-
-  // Helper: ambil CSRF cookie (wajib sebelum request yang butuh CSRF/session)
-  async function ensureCsrfCookie() {
-    await fetch('/sanctum/csrf-cookie', { credentials: 'include' });
-  }
-
-  // -------- REGISTER (POST /api/auth/register) --------
-  registerForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    registerResult.textContent = 'Loading...';
-
-    if (registerForm.password.value !== registerForm.password_confirmation.value) {
-      registerResult.textContent = '';
-      alert("Password dan konfirmasi tidak sama");
-      return;
-    }
-
-    const payload = {
-      username: registerForm.fullname.value.trim(),
-      email: registerForm.email.value.trim(),
-      password: registerForm.password.value
-    };
-
-    await ensureCsrfCookie();
-
-    const { ok, status, data } = await requestJson('/api/auth/register', 'POST', payload);
-
-    if (ok && data?.status === true) {
-      registerResult.textContent = 'Register berhasil ✅ Silakan login.';
-      window.location.hash = '#login-popup';
-      registerForm.reset();
-      return;
-    }
-
-    if (status === 422) {
-      registerResult.textContent = firstValidationError(data) || data?.message || 'Validasi gagal (422)';
-      return;
-    }
-    if (status === 429) {
-      registerResult.textContent = 'Terlalu banyak request. Coba lagi sebentar ya (429).';
-      return;
-    }
-
-    registerResult.textContent = data?.message || `Register gagal (HTTP ${status})`;
-  });
-
-  // -------- LOGIN (POST /api/auth/login) --------
-  loginForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    loginResult.textContent = 'Loading...';
-
-    const emailEl = loginForm.querySelector('input[type="email"]');
-    const passEl = loginForm.querySelector('input[type="password"]');
-
-    const payload = {
-      email: (emailEl?.value || '').trim(),
-      password: passEl?.value || ''
-    };
-
-    await ensureCsrfCookie();
-
-    const { ok, status, data } = await requestJson('/api/auth/login', 'POST', payload);
-
-    if (ok && data?.status === true) {
-      if (data?.token) {
-        localStorage.setItem('auth_token', data.token);
-        localStorage.setItem('token', data.token);
-      }
-      if (data?.data?.username) {
-        localStorage.setItem('auth_username', data.data.username);
-        localStorage.setItem('username', data.data.username);
-      }
-      if (data?.data?.id) {
-        localStorage.setItem('auth_id', String(data.data.id));
-      }
-      if (data?.data?.is_admin !== undefined && data?.data?.is_admin !== null) {
-        localStorage.setItem('auth_is_admin', String(data.data.is_admin));
-      }
-      if (data?.data?.email) {
-        localStorage.setItem('auth_email', data.data.email);
-        localStorage.setItem('email', data.data.email);
-      }
-      loginResult.textContent = 'Login berhasil ✅';
-      window.location.hash = '#'; // tutup popup
-
-      alert('Login berhasil ✅ Selamat datang!');
-      const isAdmin = Number(data?.data?.is_admin ?? 0) === 1;
-      window.location.href = isAdmin
-        ? "{{ route('admin.dashboard') }}?login=success"
-        : "{{ route('utama') }}?login=success";
-      return;
-    }
-
-    if (status === 401) {
-      loginResult.textContent = data?.message || 'Email / password salah (401).';
-      return;
-    }
-    if (status === 422) {
-      loginResult.textContent = firstValidationError(data) || data?.message || 'Validasi gagal (422)';
-      return;
-    }
-    if (status === 429) {
-      loginResult.textContent = 'Terlalu banyak percobaan login. Coba lagi sebentar ya (429).';
-      return;
-    }
-
-    loginResult.textContent = data?.message || `Login gagal (HTTP ${status})`;
-  });
-
-  // NOTE:
-  // Session Sanctum tetap dipakai (credentials include), dan token juga disimpan
-  // agar endpoint admin berbasis Bearer tetap bisa dipanggil dari halaman admin.
-</script>
+    @if (session('auth_popup'))
+        <script>
+            window.location.hash = '#{{ session('auth_popup') }}';
+        </script>
+    @endif
 
 
 </body>

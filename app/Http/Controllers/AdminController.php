@@ -10,6 +10,24 @@ use Illuminate\Validation\Rule;
 
 class AdminController extends Controller
 {
+    protected function redirectCreateUserFormError(string $message)
+    {
+        return redirect()
+            ->route('admin.users')
+            ->withInput()
+            ->with('open_create_modal', true)
+            ->with('error', $message);
+    }
+
+    protected function redirectUserFormError(string $message)
+    {
+        return redirect()
+            ->route('admin.users')
+            ->withInput()
+            ->with('open_edit_modal', true)
+            ->with('error', $message);
+    }
+
     public function usersPage()
     {
         $users = Authentication::query()
@@ -30,45 +48,55 @@ class AdminController extends Controller
         return view('admin.users', ['users' => $users]);
     }
 
-    public function user_add(Request $request)
+    public function createUserWeb(Request $request)
     {
-        $request->validate([
+        $validated = $request->validate([
             'username' => ['string', 'required', 'max:100'],
             'password' => ['string', 'required', 'min:8'],
             'email' => ['string', 'required', 'email', 'max:100', 'unique:authentications,email'],
         ]);
 
-        $display_name = $request->username;
-        $natural_username = $request->username;
-        $natural_password = $request->password;
-        $email = $request->email;
+        $display_name = $validated['username'];
+        $natural_username = $validated['username'];
+        $natural_password = $validated['password'];
+        $email = $validated['email'];
 
-        // making username unique
-        $bin = base_path('go\bin\win\suffix_username.exe');
-        $process = $this->goProcess([$bin, $natural_username]); // arg dipisah agar aman
+        if (PHP_OS_FAMILY == 'Windows') {
+            $bin = base_path('go\bin\win\suffix_username.exe');
+        } elseif (PHP_OS_FAMILY == 'Linux') {
+            $bin = base_path('go/bin/suffix_username');
+        }
+
+        $process = $this->goProcess([$bin, $natural_username]);
         $process->setTimeout(3);
         $process->run();
-        // rajin rajin taruh log, biar gampang debugging
-        if ($process->isSuccessful() == false) {
+
+        if (! $process->isSuccessful()) {
             logger()->error('ada kesalahan pada binary suffix_username', ['err' => $process->getErrorOutput()]);
-            abort(500, 'Internal error');
+            return $this->redirectCreateUserFormError('Gagal membuat username unik.');
         }
+
         $unique_username = trim($process->getOutput());
 
-        // password hashing
-        $bin = base_path('go\bin\win\hashingbcry.exe');
+        if (PHP_OS_FAMILY == 'Windows') {
+            $bin = base_path('go\bin\win\hashingbcry.exe');
+        } elseif (PHP_OS_FAMILY == 'Linux') {
+            $bin = base_path('go/bin/hashingbcry');
+        }
+
         $process = $this->goProcess([$bin, '-e', $natural_password]);
         $process->setTimeout(4);
         $process->run();
-        if ($process->isSuccessful() == false) {
+
+        if (! $process->isSuccessful()) {
             logger()->error('ada kesalahan pada hashingbcry', ['err' => $process->getErrorOutput()]);
-            abort(500, 'Internal Error');
+            return $this->redirectCreateUserFormError('Gagal menyimpan password user.');
         }
+
         $hashed_password = trim($process->getOutput());
 
-        // Simpan auth + profile dalam satu transaksi agar tidak setengah jadi.
-        $auth = DB::transaction(function () use ($unique_username, $email, $hashed_password, $display_name) {
-            $auth = Authentication::create([
+        DB::transaction(function () use ($unique_username, $email, $hashed_password, $display_name) {
+            Authentication::create([
                 'username' => $unique_username,
                 'email' => $email,
                 'password' => $hashed_password,
@@ -80,116 +108,73 @@ class AdminController extends Controller
                 'email' => $email,
                 'profile_picture' => null,
             ]);
-
-            return $auth;
         });
 
-        $token = $auth->createToken('auth_token')->plainTextToken;
-
-        return response()->json([
-            'status' => true,
-            'data' => ['email' => $auth->email, 'username' => $auth->username],
-            'token' => $token,
-            'token_type' => 'Bearer',
-        ], 201);
+        return redirect()
+            ->route('admin.users')
+            ->with('success', 'User berhasil ditambahkan.');
     }
 
-    public function user_view(Request $request)
-    {
-        // select('id', 'username','display_name', "email")->get()
-        $users_table = User::leftJoin('authentications', 'users.id', '=', 'authentications.id')->select('users.id', 'authentications.username', 'users.display_name', 'authentications.email', 'authentications.is_admin', 'authentications.created_at as users_created_at', 'authentications.updated_at as auth_updated_at', 'users.updated_at as users_updated_at')->get();
-
-        // a.is_admin a.username a.id
-        return response()->json([
-            'status' => true,
-            'data' => $users_table,
-            // 'i' => $i
-        ]);
-    }
-
-    public function user_edit(Request $request)
+    public function updateUserWeb(Request $request, Authentication $user)
     {
         $validated = $request->validate([
-            'id' => ['required', 'integer', 'exists:authentications,id'],
             'displayName' => ['required', 'string', 'max:100'],
-            'password' => ['nullable', 'string', 'min:8'], // nullable kalau edit tanpa ganti password
+            'password' => ['nullable', 'string', 'min:8'],
             'email' => [
                 'required', 'string', 'email', 'max:100',
-                Rule::unique('authentications', 'email')->ignore($request->id),
+                Rule::unique('authentications', 'email')->ignore($user->id),
             ],
             'isAdmin' => ['required', 'integer', 'in:0,1'],
         ]);
-        // email, password, is_admin, display_name, profile_picture, email
 
-        // profile_picture kapan hari aja lah anjir males
+        $password = null;
+        if (! is_null($validated['password'])) {
+            if (PHP_OS_FAMILY == 'Windows') {
+                $bin = base_path('go\bin\win\hashingbcry.exe');
+            } elseif (PHP_OS_FAMILY == 'Linux') {
+                $bin = base_path('go/bin/hashingbcry');
+            }
 
-        $id = $validated['id'];
-        $display_name = $validated['displayName'];
-        $natural_password = $validated['password'];
-        $email = $validated['email'];
-        $is_admin = $validated['isAdmin'];
-
-        // password hashing
-        if (! is_null($natural_password)) {
-            $bin = base_path('go\bin\win\hashingbcry.exe');
-            $process = $this->goProcess([$bin, '-e', $natural_password]);
+            $process = $this->goProcess([$bin, '-e', $validated['password']]);
             $process->setTimeout(4);
             $process->run();
-            if ($process->isSuccessful() == false) {
+
+            if (! $process->isSuccessful()) {
                 logger()->error('ada kesalahan pada hashingbcry', ['err' => $process->getErrorOutput()]);
-                abort(500, 'Internal Error');
+                return $this->redirectUserFormError('Gagal mengubah password user.');
             }
+
             $password = trim($process->getOutput());
-        } else {
-            $password = null;
         }
 
-        // masukin ke database
-        $auth = DB::transaction(function () use ($id, $display_name, $email, $password, $is_admin) {
-            $auth = Authentication::query()->findOrFail($id);
-            if (is_null($password)) {
-                $auth->update([
-                    'email' => $email,
-                    'is_admin' => $is_admin,
-                ]);
-            } else {
-                $auth->update([
-                    'email' => $email,
-                    'is_admin' => $is_admin,
-                    'password' => $password,
-                ]);
-            }
-
-            User::where('username', $auth->username)->update([
-                'display_name' => $display_name,
-            ]);
+        DB::transaction(function () use ($user, $validated, $password) {
+            $payload = [
+                'email' => $validated['email'],
+                'is_admin' => $validated['isAdmin'],
+            ];
 
             if (! is_null($password)) {
-                $auth->tokens()->delete();
+                $payload['password'] = $password;
             }
 
-            return $auth->fresh();
+            $user->update($payload);
+
+            User::where('username', $user->username)->update([
+                'display_name' => $validated['displayName'],
+            ]);
         });
 
-        return response()->json([
-            'status' => true,
-            'data' => $auth,
-        ], 200);
+        return redirect()
+            ->route('admin.users')
+            ->with('success', 'User berhasil diupdate.');
     }
 
-    public function user_delete(Request $request)
+    public function deleteUserWeb(Authentication $user)
     {
-        $validated = $request->validate([
-            'id' => ['required', 'integer', 'exists:authentications,id'],
-        ]);
-        $id = $validated['id'];
+        $user->delete();
 
-        $auth = Authentication::query()->findOrFail($id);
-        $auth->delete();
-
-        return response()->json([
-            'status' => true,
-            'message' => 'User berhasil dihapus.',
-        ], 200);
+        return redirect()
+            ->route('admin.users')
+            ->with('success', 'User berhasil dihapus.');
     }
 }

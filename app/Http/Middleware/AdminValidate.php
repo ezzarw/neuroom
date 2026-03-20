@@ -18,17 +18,11 @@ class AdminValidate
         $auth = $request->user();
 
         if ($auth === null) {
-            return response()->json([
-                'status' => false,
-                'message' => 'Unauthenticated',
-            ], 401);
+            return redirect('/');
         }
 
         if ((int) $auth->is_admin !== 1) {
-            return response()->json([
-                'status' => false,
-                'message' => 'Forbidden: admin only',
-            ], 403);
+            abort(403, 'Forbidden');
         }
 
         return $next($request);

@@ -1,126 +1,339 @@
-# Panduan Frontend Agar Tidak Error Validate Backend
+# Panduan Frontend Untuk Flow Web Neuroom
 
-## Tujuan
+Dokumen ini menjelaskan cara frontend harus berinteraksi dengan backend Neuroom setelah alurnya dipindahkan ke web route biasa.
 
-Agar request dari frontend lolos `validate()` di backend Laravel.
+## Yang Perlu Frontend Tambahkan
 
-## Endpoint
+Bagian ini sengaja ditaruh di atas supaya tim frontend bisa langsung lihat pekerjaan yang perlu dikerjakan.
 
-1. `POST /api/auth/register`
-2. `POST /api/auth/login`
-3. `GET /api/admin/user-view`
-4. `POST /api/admin/user-add`
-5. `PUT /api/admin/user-edit`
-6. `DELETE /api/admin/user-delete`
+### Sudah Siap Dikerjakan Frontend
 
-## Header Wajib
+#### 1. Auth Web Flow
 
-- Public (`/api/auth/*`):
-  - `Content-Type: application/json`
-  - `Accept: application/json`
-- Admin (`/api/admin/*`):
-  - `Content-Type: application/json`
-  - `Accept: application/json`
-  - `Authorization: Bearer <token>`
+Frontend perlu memastikan UI login, register, dan logout mengikuti route ini:
 
-## Payload Register
+- `POST /auth/register`
+- `POST /auth/login`
+- `POST /auth/logout`
 
-Gunakan key persis ini:
+Yang perlu frontend tambahkan atau pastikan:
 
-```json
-{
-  "username": "string",
-  "email": "user@mail.com",
-  "password": "minimal8karakter"
-}
-```
+- form register kirim `username`, `email`, `password`
+- form login kirim `email`, `password`
+- setelah login, hormati redirect backend ke `/admin` atau `/utama`
+- logout dilakukan lewat form `POST`, bukan hanya clear state lokal
 
-### Rule Register
+#### 2. Halaman Profil User
 
-- `username`: wajib, string, max 100 karakter
-- `email`: wajib, format email valid, max 100, unik (belum terdaftar)
-- `password`: wajib, string, min 8 karakter
+Backend sudah menyediakan:
 
-## Payload Login
+- `GET /me`
 
-```json
-{
-  "email": "user@mail.com",
-  "password": "string"
-}
-```
+Yang perlu frontend tambahkan atau pastikan:
 
-### Rule Login
+- halaman profil baca data dari page render `/me`
+- jangan ambil status auth dari `localStorage`
+- kalau butuh edit profil, tunggu route final karena endpoint submit-nya belum dipasang lagi
 
-- `email`: wajib, format email valid, max 100
-- `password`: wajib, string
+#### 3. Fitur Summary
 
-## Payload Admin User Add
+Backend sudah menyediakan:
 
-```json
-{
-  "username": "string",
-  "email": "user@mail.com",
-  "password": "minimal8karakter"
-}
-```
+- `POST /summary`
 
-### Rule Admin User Add
+Yang perlu frontend tambahkan atau pastikan:
 
-- `username`: wajib, string, max 100
-- `email`: wajib, email valid, max 100, unik
-- `password`: wajib, string, min 8
+- form upload kirim `document` dan `bahasa`
+- pakai `multipart/form-data`
+- setelah submit, frontend baca hasil dari flash session `summary_result`
+- UI hasil ringkasan sebaiknya siap menampilkan:
+  - `summary_result.message`
+  - `summary_result.status`
+  - `summary_result.output`
 
-## Payload Admin User Edit
+Catatan:
 
-```json
-{
-  "id": 1,
-  "displayName": "Nama Baru",
-  "email": "baru@mail.com",
-  "isAdmin": 0,
-  "password": "opsional_min_8"
-}
-```
+- backend saat ini `redirect back()`
+- artinya frontend perlu punya halaman sendiri yang memang berisi form summary + area hasil summary
 
-### Rule Admin User Edit
+#### 4. Admin Users CRUD
 
-- `id`: wajib, integer, harus ada di `authentications.id`
-- `displayName`: wajib, string, max 100
-- `email`: wajib, email valid, max 100, unik (kecuali data dirinya sendiri)
-- `isAdmin`: wajib, integer, hanya `0` atau `1`
-- `password`: opsional, kalau dikirim harus min 8
+Backend sudah menyediakan:
 
-## Payload Admin User Delete
+- `GET /admin/users`
+- `POST /admin/users`
+- `PUT /admin/users/{user}`
+- `DELETE /admin/users/{user}`
 
-```json
-{
-  "id": 1
-}
-```
+Yang perlu frontend tambahkan atau pastikan:
 
-### Rule Admin User Delete
+- halaman daftar user admin
+- modal atau form create user
+- modal atau form edit user
+- tombol delete user dengan form `DELETE`
+- tampilan flash message sukses atau error setelah redirect
 
-- `id`: wajib, integer, harus ada di `authentications.id`
+#### 5. Navigasi Halaman Utama
 
-## Validasi di Frontend Sebelum Submit
+Backend sudah menyediakan halaman:
 
-- `trim` untuk `username` dan `email`
-- jangan submit jika ada field kosong
-- jika form pakai `fullname`, map ke `username` sebelum kirim
-- jangan kirim field yang backend tidak pakai
-- untuk `PUT /admin/user-edit`, kalau tidak ganti password: jangan kirim `password` atau kirim `null`
-- untuk `PUT` dan `DELETE`, kirim payload di JSON body (bukan query params URL)
+- `GET /belajar`
+- `GET /pomodoro`
+- `GET /utama`
+- `GET /fokus` yang redirect ke `/pomodoro`
+- `GET /catatan` yang redirect ke `/utama`
 
-## Handling Response
+Yang perlu frontend tambahkan atau pastikan:
 
-- `422`: validasi gagal
-- `401`: kredensial salah
-- `403`: login valid tapi bukan admin
-- `429`: terlalu banyak request
-- `500`: error internal server
+- semua link menu pakai route Laravel yang benar
+- jangan pakai file statis `.html`
+- UI harus siap menerima redirect dari `/fokus` dan `/catatan`
 
-## Setelah Sukses Register/Login
+### Belum Siap Final, Jangan Dianggap Kontrak Tetap
 
-- simpan token dari response
-- kirim header `Authorization: Bearer <token>` untuk endpoint private
+#### 1. Edit Profile Submit
+
+Status backend:
+
+- logic backend ada di `UserController::edit_profile()`
+- route publiknya belum dipasang
+
+Artinya untuk frontend:
+
+- jangan implement submit final dulu
+- kalau mau mulai desain UI, batasi di layout saja
+- field yang kemungkinan dipakai nanti:
+  - `display_name`
+  - `email`
+  - `profile_picture`
+
+#### 2. Pomodoro Backend Submit/Get
+
+Status backend:
+
+- logic backend ada di `PomodoroController`
+- route final untuk post/get belum dipasang
+
+Artinya untuk frontend:
+
+- boleh lanjut desain UI pomodoro
+- jangan anggap tracking session ke backend sudah final
+- perlu keputusan dulu apakah nanti pakai form biasa atau AJAX kecil dengan session web
+
+### Urutan Kerja Frontend Yang Disarankan
+
+1. Finalkan auth form dan redirect handling
+2. Finalkan halaman summary dengan submit form + render `summary_result`
+3. Finalkan admin users CRUD
+4. Rapikan seluruh navigasi agar tidak ada link statis lama
+5. Setelah itu baru sepakati kontrak final untuk edit profile dan pomodoro
+
+### Hal Yang Jangan Dilakukan Frontend
+
+- jangan panggil `/api/...`
+- jangan pakai bearer token
+- jangan pakai `sanctum/csrf-cookie`
+- jangan simpan auth sensitif di `localStorage`
+- jangan menganggap edit profile dan pomodoro submit sudah final sebelum route-nya dipasang
+
+## Prinsip Dasar
+
+Frontend sekarang harus menganggap backend sebagai aplikasi Laravel web biasa:
+
+- submit form ke route web
+- kirim CSRF token standar Laravel
+- biarkan browser membawa cookie session
+- baca hasil dari redirect, flash message, dan Blade render
+
+Jangan pakai pola lama:
+
+- jangan panggil `/api/...`
+- jangan tunggu response JSON sebagai alur utama
+- jangan pakai bearer token
+- jangan pakai `sanctum/csrf-cookie`
+
+## Route Yang Dipakai Frontend
+
+Route utama:
+
+- `POST /auth/register`
+- `POST /auth/login`
+- `POST /auth/logout`
+- `GET /me`
+- `GET /belajar`
+- `GET /pomodoro`
+- `GET /utama`
+- `POST /summary`
+- `GET /admin/users`
+- `POST /admin/users`
+- `PUT /admin/users/{user}`
+- `DELETE /admin/users/{user}`
+
+## CSRF dan Session
+
+Yang wajib untuk form Blade:
+
+- selalu sertakan `@csrf`
+- untuk method `PUT` atau `DELETE`, sertakan `@method('PUT')` atau `@method('DELETE')`
+- biarkan browser mengirim cookie session standar Laravel
+
+Kalau ada AJAX kecil di halaman Blade:
+
+- ambil token dari meta `csrf-token`
+- kirim header `X-CSRF-TOKEN`
+- tetap gunakan cookie session browser
+
+## Aturan Form Auth
+
+### Register
+
+Action:
+- `POST /auth/register`
+
+Field:
+- `username`
+- `email`
+- `password`
+
+Hasil sukses:
+- redirect ke `/utama`
+
+### Login
+
+Action:
+- `POST /auth/login`
+
+Field:
+- `email`
+- `password`
+
+Hasil sukses:
+- admin ke `/admin`
+- user biasa ke `/utama`
+
+### Logout
+
+Action:
+- `POST /auth/logout`
+
+Hasil sukses:
+- redirect ke `/`
+
+## Aturan Form Summary
+
+Action:
+- `POST /summary`
+
+Encoding:
+- `multipart/form-data`
+
+Field:
+- `document`
+- `bahasa`
+
+Nilai `bahasa` yang valid:
+- `indonesia`
+- `english`
+
+Hasil sukses:
+- redirect back ke halaman yang mengirim form
+- hasil ringkasan dibaca dari flash session `summary_result`
+
+## Aturan Form Admin Users
+
+### Create User
+
+Action:
+- `POST /admin/users`
+
+Field:
+- `username`
+- `email`
+- `password`
+
+Hasil:
+- sukses redirect ke `/admin/users`
+- gagal redirect ke `/admin/users` dan modal create dibuka lagi
+
+### Edit User
+
+Action:
+- `PUT /admin/users/{user}`
+
+Field:
+- `displayName`
+- `email`
+- `isAdmin`
+- `password` opsional
+
+Hasil:
+- sukses redirect ke `/admin/users`
+- gagal redirect ke `/admin/users` dan modal edit dibuka lagi
+
+### Delete User
+
+Action:
+- `DELETE /admin/users/{user}`
+
+Hasil:
+- sukses redirect ke `/admin/users`
+
+## Edit Profile dan Pomodoro
+
+Status saat ini:
+
+- route final untuk edit profile belum dipasang
+- route final untuk post/get data pomodoro juga belum dipasang
+
+Catatan:
+
+- logic backend-nya masih ada
+- frontend perlu sepakati dulu bentuk route, payload, dan cara menampilkan hasil
+
+## Validasi Frontend Sebelum Submit
+
+Yang aman dilakukan di frontend:
+
+- `trim` input teks
+- jangan submit field wajib kosong
+- untuk email, validasi format dasar di browser
+- untuk file summary, batasi jenis file sesuai accept list
+- untuk password edit admin, kalau kosong jangan kirim nilai palsu
+
+Yang jangan dilakukan:
+
+- jangan kirim field ekstra yang backend tidak pakai
+- jangan mengandalkan local state sebagai sumber otorisasi
+- jangan menyimpan token auth di `localStorage`
+
+## Pola Menampilkan Status Ke User
+
+Karena flow backend berbasis redirect:
+
+- sukses dibaca dari flash session seperti `success`
+- error validasi dibaca dari `$errors`
+- beberapa halaman juga memakai flash `error`
+
+Frontend tidak perlu memaksa semua hasil jadi toast berbasis JSON.
+
+## Navigasi Yang Sudah Diperbaiki
+
+Beberapa link lama berbasis file statis sudah diganti ke route web:
+
+- link `Catatan` sekarang menuju `/catatan`
+- `GET /catatan` saat ini redirect ke `/utama`
+- card `Pelajaran Umum` sekarang menuju `/utama`
+
+Kalau menambah menu baru:
+
+- gunakan path route Laravel
+- jangan link ke file `.html` statis
+
+## Checklist Frontend
+
+- [x] Tidak memakai `/api/...`
+- [x] Tidak memakai flow `sanctum/csrf-cookie`
+- [x] Admin users submit lewat form web
+- [x] Summary submit lewat form web
+- [x] Navigasi utama tidak lagi link ke file `.html`
+- [ ] Tambahkan `autocomplete` yang sesuai di form-form admin untuk mengurangi warning browser

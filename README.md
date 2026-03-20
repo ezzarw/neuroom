@@ -3,7 +3,7 @@
 Panduan ini fokus ke kebutuhan DevOps untuk menjalankan Neuroom di environment lokal, staging, dan production.
 
 Dokumentasi teknis:
-- API: `docs/API.md`
+- Endpoint: `docs/ENDPOINT.md`
 - Panduan frontend agar lolos validasi backend: `docs/PANDUAN_FRONTEND_VALIDATION.md`
 
 ## 1. Ringkasan Arsitektur

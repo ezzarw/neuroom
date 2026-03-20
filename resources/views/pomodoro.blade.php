@@ -8,6 +8,7 @@
 
   <!-- CSS -->
     <link rel="stylesheet" href="{{ asset('css/pomodoro.css') }}">
+  <script src="{{ asset('js/vendor/axios.min.js') }}"></script>
 </head>
 <body>
   
@@ -20,7 +21,7 @@
      <li><a href="/">Beranda</a></li>
     <li><a href="/belajar">Belajar</a></li>
   <li><a href="/pomodoro">Fokus</a></li>
-  <li><a href="catatan.html">Catatan</a></li>
+  <li><a href="/catatan">Catatan</a></li>
 </ul>
   </div>
 </nav>

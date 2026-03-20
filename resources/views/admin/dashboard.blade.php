@@ -3,6 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>Admin Dashboard</title>
 
     <link rel="stylesheet" href="{{ asset('css/admin.css') }}">
@@ -39,6 +40,10 @@
     </style>
 </head>
 <body>
+@php
+    $admin = auth()->user();
+    $adminName = $admin?->username ?? $admin?->name ?? 'Admin';
+@endphp
 
 <div class="layout">
 
@@ -71,8 +76,13 @@
         <div class="header">
             <h1>Welcome Dashboard!</h1>
             <div class="admin-session">
-                <span class="admin-name">Login sebagai: <strong id="admin-identity">-</strong></span>
-                <button type="button" id="logout-btn" class="logout-btn">Logout</button>
+                <span class="admin-name">
+                    Login sebagai: <strong>{{ $adminName }}</strong>
+                </span>
+                <form action="{{ url('/auth/logout') }}" method="POST">
+                    @csrf
+                    <button type="submit" class="logout-btn">Logout</button>
+                </form>
             </div>
         </div>
 
@@ -130,55 +140,6 @@
 
     </main>
 </div>
-
-<script>
-    const adminIdentityEl = document.getElementById('admin-identity');
-    const logoutBtn = document.getElementById('logout-btn');
-
-    function getStoredIdentity() {
-        const userId =
-            localStorage.getItem('auth_id') ||
-            sessionStorage.getItem('auth_id') ||
-            '';
-        const username =
-            localStorage.getItem('auth_username') ||
-            localStorage.getItem('username') ||
-            sessionStorage.getItem('auth_username') ||
-            sessionStorage.getItem('username') ||
-            '';
-
-        if (userId && username) return `${userId} - ${username}`;
-        if (userId) return `ID ${userId}`;
-        if (username) return username;
-        return '-';
-    }
-
-    adminIdentityEl.textContent = getStoredIdentity();
-
-    logoutBtn.addEventListener('click', () => {
-        const ok = confirm('Yakin ingin logout?');
-        if (!ok) return;
-
-        const keys = [
-            'auth_token',
-            'token',
-            'token_type',
-            'auth_id',
-            'auth_is_admin',
-            'auth_username',
-            'username',
-            'auth_email',
-            'email',
-        ];
-
-        keys.forEach((key) => {
-            localStorage.removeItem(key);
-            sessionStorage.removeItem(key);
-        });
-
-        window.location.href = '/';
-    });
-</script>
 
 </body>
 </html>

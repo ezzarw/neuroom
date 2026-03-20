@@ -6,16 +6,16 @@ use Symfony\Component\Process\Process;
 
 abstract class Controller
 {
-    protected function resolveGoBinary(string $binaryName): string
-    {
-        $extension = DIRECTORY_SEPARATOR === '\\' ? '.exe' : '';
-        $platformPath = base_path("go/bin/{$binaryName}{$extension}");
-        if (file_exists($platformPath)) {
-            return str_replace(['/', '\\'], DIRECTORY_SEPARATOR, $platformPath);
-        }
+    // protected function resolveGoBinary(string $binaryName): string
+    // {
+    //     $extension = DIRECTORY_SEPARATOR === '\\' ? '.exe' : '';
+    //     $platformPath = base_path("go/bin/{$binaryName}{$extension}");
+    //     if (file_exists($platformPath)) {
+    //         return str_replace(['/', '\\'], DIRECTORY_SEPARATOR, $platformPath);
+    //     }
 
-        return str_replace(['/', '\\'], DIRECTORY_SEPARATOR, base_path("go/bin/{$binaryName}"));
-    }
+    //     return str_replace(['/', '\\'], DIRECTORY_SEPARATOR, base_path("go/bin/{$binaryName}"));
+    // }
 
     protected function goProcess(array $command): Process
     {
