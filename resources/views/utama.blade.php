@@ -218,7 +218,7 @@
     <div class="container">
       <div class="welcome-card">
         <div>
-          <h1>Selamat datang kembali 👋</h1>
+          <h1>Selamat datang kembali</h1>
           <p>
             Mulai dari upload materi, bikin rangkuman, sampai mode fokus — semuanya dari sini.
           </p>
