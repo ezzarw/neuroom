@@ -19,7 +19,7 @@
      <li><a href="/">Beranda</a></li>
     <li><a href="/belajar">Belajar</a></li>
   <li><a href="/pomodoro">Fokus</a></li>
-  <li><a href="catatan.html">Catatan</a></li>
+  <li><a href="/catatan">Catatan</a></li>
 </ul>
   </div>
 </nav>
@@ -30,7 +30,7 @@
 
         <div class="card-wrapper">
             <!-- Card Pelajaran Umum -->
-            <a href="pelajaran-umum.html" class="card">
+            <a href="/utama" class="card">
             <!-- GAMBAR -->
             <img src="{{ asset('img/umum.jpg') }}" class="card-img" alt="Pelajaran Umum">
                 <h2>Pelajaran Umum</h2>

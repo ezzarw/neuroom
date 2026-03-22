@@ -29,6 +29,13 @@ const modalClose2 = document.getElementById("modalClose2");
 const detailHeader = document.getElementById("detailHeader");
 const detailBody = document.getElementById("detailBody");
 
+window.axios.defaults.headers.common["X-Requested-With"] = "XMLHttpRequest";
+window.axios.defaults.headers.common["Accept"] = "application/json";
+window.axios.defaults.withCredentials = true;
+window.axios.defaults.headers.common["X-CSRF-TOKEN"] = document
+  .querySelector('meta[name="csrf-token"]')
+  ?.getAttribute("content") || "";
+
 // ===== circle math =====
 const R = 52;
 const CIRC = 2 * Math.PI * R; // ~326.7256
@@ -189,17 +196,32 @@ modalClose2.addEventListener("click", closeModal);
 
 // ===== BACKEND HOOK (optional) =====
 // Kalau backend temenmu siap, ganti USE_BACKEND = true
-// lalu sesuaikan endpointnya.
+// lalu sesuaikan endpoint web-nya.
 const USE_BACKEND = false;
 
-async function apiList(){
-  if (!USE_BACKEND) return loadLocalTracking();
+async function backendRequest(url, options = {}){
+  const method = String(options.method || "GET").toUpperCase();
+  try {
+    const response = await window.axios({
+      url,
+      method,
+      data: options.body,
+      headers: options.headers || {},
+    });
 
-  const res = await fetch("/api/study-sessions");
-  return await res.json();
+    return response.status === 204 ? null : response.data;
+  } catch (error) {
+    throw new Error(error?.response?.data?.message || `Request ${method} gagal.`);
+  }
 }
 
-async function apiStart(){
+async function backendList(){
+  if (!USE_BACKEND) return loadLocalTracking();
+
+  return await backendRequest("/study-sessions");
+}
+
+async function backendStart(){
   if (!USE_BACKEND) {
     // local mode: bikin "session id" dummy
     state.currentSessionId = String(Date.now());
@@ -208,23 +230,21 @@ async function apiStart(){
     return;
   }
 
-  const res = await fetch("/api/study-sessions/start", {
+  const data = await backendRequest("/study-sessions/start", {
     method:"POST",
-    headers: jsonHeaders(),
-    body: JSON.stringify({
+    body: {
       mode: state.mode,
       meta: state.mode === "pomodoro"
         ? { preset_min: state.selectedPresetMin, target_end_at: state.targetEndAt }
         : {}
-    })
+    }
   });
-  const data = await res.json();
   state.currentSessionId = data.id;
   state.hasSession = true;
   saveState();
 }
 
-async function apiStop(durationSec){
+async function backendStop(durationSec){
   if (!USE_BACKEND) {
     const list = loadLocalTracking();
     const now = new Date();
@@ -242,22 +262,14 @@ async function apiStop(durationSec){
     return;
   }
 
-  await fetch("/api/study-sessions/stop", {
+  await backendRequest("/study-sessions/stop", {
     method:"POST",
-    headers: jsonHeaders(),
-    body: JSON.stringify({
+    body: {
       id: state.currentSessionId,
       duration_sec: durationSec,
       meta: state.mode === "pomodoro" ? { preset_min: state.selectedPresetMin } : {}
-    })
+    }
   });
-}
-
-function jsonHeaders(){
-  return {
-    "Content-Type":"application/json",
-    "X-CSRF-TOKEN": document.querySelector('meta[name="csrf-token"]')?.content ?? ""
-  }
 }
 
 // ===== ACTIONS =====
@@ -276,7 +288,7 @@ function start(){
   // catat start ISO (untuk local tracking)
   state._startedAtISO = new Date().toISOString();
 
-  if (!state.hasSession) apiStart();
+  if (!state.hasSession) backendStart();
   saveState();
   updateUI();
 }
@@ -311,7 +323,7 @@ async function finish(){
   if (!state.hasSession) return;
 
   const durationSec = calcDurationSec();
-  await apiStop(durationSec);
+  await backendStop(durationSec);
 
   // clear session link
   state.hasSession = false;
@@ -319,7 +331,7 @@ async function finish(){
 
   reset();
 
-  const list = await apiList();
+  const list = await backendList();
   renderTracking(list);
 }
 
@@ -350,7 +362,7 @@ resetBtn.addEventListener("click", reset);
 finishBtn.addEventListener("click", finish);
 switchBtn.addEventListener("click", switchMode);
 refreshBtn.addEventListener("click", async () => {
-  const list = await apiList();
+  const list = await backendList();
   renderTracking(list);
 });
 
@@ -362,7 +374,7 @@ document.querySelectorAll("[data-preset]").forEach(btn=>{
 loadState();
 
 // render tracking first load
-apiList().then(renderTracking);
+backendList().then(renderTracking);
 
 // tick loop
 setInterval(() => {
