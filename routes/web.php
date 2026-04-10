@@ -43,8 +43,8 @@ Route::middleware('auth')->group(function () {
     });
     
     Route::get('/catatan', function () {
-        return redirect('/utama');
-    });
+    return view('catatan');
+    })->name('catatan');
     
     Route::get('/belajar', function () {
         return view('belajar');
@@ -55,7 +55,11 @@ Route::middleware('auth')->group(function () {
     Route::get('/utama', function () {
         return view('utama');
     })->name('utama');
+    Route::get('/profile', function () {
+    return view('profile');
+    })->name('profile');
 });
+    
 
 Route::middleware(['auth', 'admin.validate'])->group(function () {
     Route::get('/dashboard', function () {

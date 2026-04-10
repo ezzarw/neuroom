@@ -1,0 +1,175 @@
+:root{
+  --bg:#F8F6F2;
+  --card:#ffffff;
+  --text:#2F3E3E;
+  --muted:#7a8b8b;
+
+  --primary:#5FA8A3;
+  --accent:#E6C972;
+  --danger:#c75c5c;
+}
+
+*{
+  margin:0;
+  padding:0;
+  box-sizing:border-box;
+  font-family: 'Segoe UI', sans-serif;
+}
+
+body{
+  background: var(--bg);
+}
+
+/* CONTAINER */
+.container{
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  height:100vh;
+}
+
+/* CARD */
+.profile-card{
+  background: var(--card);
+  padding: 25px;
+  border-radius: 20px;
+  width: 320px;
+  text-align: center;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+  position: relative;
+}
+
+/* HEADER */
+.card-header{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  margin-bottom:15px;
+  border-bottom:1px solid #eee;
+  padding-bottom:10px;
+}
+
+.card-header h3{
+  font-size:18px;
+  color: var(--text);
+}
+
+/* BACK BUTTON */
+.back-btn{
+  background: var(--bg);
+  border:none;
+  padding:5px 10px;
+  border-radius:8px;
+  cursor:pointer;
+  transition:0.2s;
+}
+
+.back-btn:hover{
+  background:#eaeaea;
+}
+
+/* FOTO */
+.profile-img{
+  width:100px;
+  height:100px;
+  border-radius:50%;
+  object-fit:cover;
+  margin:15px auto;
+  display:block;
+}
+
+/* TEXT */
+.name{
+  color: var(--text);
+  font-size:22px;
+  font-weight:600;
+}
+
+.username{
+  color: var(--muted);
+  margin-bottom:10px;
+}
+
+.info{
+  color: var(--text);
+  margin-bottom:20px;
+  font-size:14px;
+}
+
+/* BUTTON */
+.actions{
+  display:flex;
+  gap:10px;
+  justify-content:center;
+}
+
+.edit-btn{
+  background: var(--accent);
+  border:none;
+  padding:10px 15px;
+  border-radius:10px;
+  cursor:pointer;
+  transition:0.2s;
+}
+
+.edit-btn:hover{
+  opacity:0.9;
+}
+
+.logout-btn{
+  background: var(--danger);
+  color:white;
+  border:none;
+  padding:10px 15px;
+  border-radius:10px;
+  cursor:pointer;
+}
+
+/* MODAL */
+.modal{
+  display:none;
+  position:fixed;
+  top:0;
+  left:0;
+  width:100%;
+  height:100%;
+  background: rgba(0,0,0,0.4);
+  justify-content:center;
+  align-items:center;
+}
+
+.modal-content{
+  background:white;
+  padding:25px;
+  border-radius:15px;
+  width:300px;
+}
+
+.modal-content input{
+  width:100%;
+  padding:10px;
+  margin:8px 0;
+  border-radius:8px;
+  border:1px solid #ccc;
+}
+
+.modal-actions{
+  display:flex;
+  justify-content:space-between;
+  margin-top:10px;
+}
+
+.save-btn{
+  background: var(--primary);
+  color:white;
+  border:none;
+  padding:8px 12px;
+  border-radius:8px;
+}
+
+.cancel-btn{
+  background:#ccc;
+  border:none;
+  padding:8px 12px;
+  border-radius:8px;
+}
