@@ -4,7 +4,7 @@ use Laravel\Sanctum\Sanctum;
 
 return [
 
-    'routes' => false,
+    'routes' => true,
 
     /*
     |--------------------------------------------------------------------------
@@ -17,12 +17,12 @@ return [
     |
     */
 
-    'stateful' => explode(',', env('SANCTUM_STATEFUL_DOMAINS', sprintf(
-        '%s%s',
-        'localhost,localhost:3000,127.0.0.1,127.0.0.1:8000,::1',
+    'stateful' => array_values(array_filter(array_unique(explode(',', env('SANCTUM_STATEFUL_DOMAINS', sprintf(
+        '%s,%s,%s',
+        'localhost,localhost:3000,127.0.0.1,127.0.0.1:8000,127.0.0.1:8011,::1',
         Sanctum::currentApplicationUrlWithPort(),
-        // Sanctum::currentRequestHost(),
-    ))),
+        Sanctum::currentRequestHost(),
+    )))))),
 
     /*
     |--------------------------------------------------------------------------

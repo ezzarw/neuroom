@@ -2,44 +2,29 @@
 
 namespace Database\Seeders;
 
+use App\Models\Auth;
+use App\Models\User;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Hash;
 
 class AdminUserSeeder extends Seeder
 {
-    /**
-     * Seed admin user for authentications and users tables.
-     */
     public function run(): void
     {
-        $now = now();
+        $auth = Auth::updateOrCreate(
+            ['username' => 'admin'],
+            [
+                'email' => 'admin@neuroom.local',
+                'password' => 'admin12345',
+                'is_admin' => 1,
+            ]
+        );
 
-        DB::transaction(function () use ($now): void {
-            $adminUsername = 'admin';
-            $adminEmail = 'admin@neuroom.local';
-
-            DB::table('authentications')->updateOrInsert(
-                ['username' => $adminUsername],
-                [
-                    'email' => $adminEmail,
-                    'password' => Hash::make('admin12345'),
-                    'is_admin' => 1,
-                    'created_at' => $now,
-                    'updated_at' => $now,
-                ]
-            );
-
-            DB::table('users')->updateOrInsert(
-                ['username' => $adminUsername],
-                [
-                    'display_name' => 'Administrator',
-                    'email' => $adminEmail,
-                    'profile_picture' => null,
-                    'created_at' => $now,
-                    'updated_at' => $now,
-                ]
-            );
-        });
+        User::updateOrCreate(
+            ['auth_id' => $auth->id],
+            [
+                'auth_id' => $auth->id,
+                'display_name' => 'Administrator',
+            ]
+        );
     }
 }

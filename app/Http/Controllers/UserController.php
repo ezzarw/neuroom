@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Authentication;
+use App\Models\Auth as Authentication;
 use App\Models\User;
 use DateTime;
 use Illuminate\Http\Request;
@@ -11,16 +11,8 @@ use Illuminate\Support\Facades\Storage;
 
 class UserController extends Controller
 {
-    // Route publik untuk edit profil belum dipasang lagi
-    // sampai kontrak request/response dengan frontend disepakati.
-    public function edit_profile(Request $request)
+    public function updateMe(Request $request)
     {
-        // cek apakah user sudah login apa belum\
-        if ($request->user() == null) {
-            return redirect('/');
-        }
-
-        
         $request->validate([
             'display_name' => 'string|max:100|nullable',
             'email' => 'email|string|max:100|nullable',
@@ -31,12 +23,14 @@ class UserController extends Controller
         $display_name = $request->display_name;
         $email = $request->email;
         $profile_picture = $request->file('profile_picture');
-        
-        $row_users = User::where('username', $username)->first();
+
         $row_authentications = Authentication::where('username', $username)->first();
+        $row_users = $row_authentications
+            ? User::where('auth_id', $row_authentications->id)->first()
+            : null;
 
         if ($row_users == null || $row_authentications == null) {
-            abort(404, 'User tidak ditemukan');
+            return $this->apiError('User tidak ditemukan.', 404);
         }
 
         $old_profile_picture = $row_users->profile_picture;
@@ -52,9 +46,13 @@ class UserController extends Controller
         if (is_null($email) == false) {
             if ($row_authentications->email != $email) {
                 if (Authentication::where('email', $email)->exists()) {
-                    return back()
-                        ->withInput()
-                        ->withErrors(['email' => 'email sudah digunakan']);
+                    return $this->apiError(
+                        'Email sudah digunakan.',
+                        422,
+                        [
+                            'email' => ['Email sudah digunakan.'],
+                        ]
+                    );
                 }
             }
         }
@@ -90,9 +88,7 @@ class UserController extends Controller
                 }
             }
 
-            return back()
-                ->withInput()
-                ->withErrors(['profile' => 'gagal edit profil']);
+            return $this->apiError('Gagal edit profil.', 500);
         }
 
         if (is_null($profile_picture) == false) {
@@ -109,6 +105,23 @@ class UserController extends Controller
             }
         }
 
-        return back()->with('success', 'Profil berhasil diupdate.');
+        $row_users->refresh();
+        $row_authentications->refresh();
+
+        return $this->apiSuccess('Profil berhasil diupdate.', [
+            'user' => [
+                'id' => $row_authentications->id,
+                'username' => $row_authentications->username,
+                'email' => $row_authentications->email,
+                'is_admin' => (int) $row_authentications->is_admin,
+                'display_name' => $row_users->display_name,
+                'profile_picture' => $row_users->profile_picture,
+                'profile_picture_url' => $row_users->profile_picture ? asset('storage/profile_picture/'.$row_users->profile_picture) : null,
+                'created_at' => $this->formatDateTime($row_users->created_at),
+                'updated_at' => $this->formatDateTime($row_users->updated_at),
+                'auth_created_at' => $this->formatDateTime($row_authentications->created_at),
+                'auth_updated_at' => $this->formatDateTime($row_authentications->updated_at),
+            ],
+        ]);
     }
 }

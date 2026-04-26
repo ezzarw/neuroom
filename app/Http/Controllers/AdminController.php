@@ -2,155 +2,180 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Authentication;
+use App\Models\Auth as Authentication;
+use App\Models\PomodoroHistory;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Carbon;
 use Illuminate\Validation\Rule;
 
 class AdminController extends Controller
 {
-    protected function redirectCreateUserFormError(string $message)
+    protected function transformPomodoroSession(PomodoroHistory $session): array
     {
-        return redirect()
-            ->route('admin.users')
-            ->withInput()
-            ->with('open_create_modal', true)
-            ->with('error', $message);
+        $session->loadMissing('user.auth');
+
+        return [
+            'id' => $session->id,
+            'username' => $session->user?->auth?->username,
+            'session' => $session->session,
+            'date' => $session->created_at?->toDateString(),
+            'duration_seconds' => (int) ($session->duration_seconds ?? 0),
+            'duration' => $this->formatDuration((int) ($session->duration_seconds ?? 0)),
+            'created_at' => $this->formatDateTime($session->created_at),
+            'updated_at' => $this->formatDateTime($session->updated_at),
+        ];
     }
 
-    protected function redirectUserFormError(string $message)
+    protected function transformUserRow(object $row): array
     {
-        return redirect()
-            ->route('admin.users')
-            ->withInput()
-            ->with('open_edit_modal', true)
-            ->with('error', $message);
+        return [
+            'id' => $row->id,
+            'username' => $row->username,
+            'display_name' => $row->display_name,
+            'email' => $row->email,
+            'is_admin' => (int) $row->is_admin,
+            'created_at' => $row->created_at ? $this->formatDateTime(Carbon::parse($row->created_at)) : null,
+            'auth_updated_at' => $row->auth_updated_at ? $this->formatDateTime(Carbon::parse($row->auth_updated_at)) : null,
+            'updated_at' => $row->updated_at ? $this->formatDateTime(Carbon::parse($row->updated_at)) : null,
+        ];
+    }
+
+    protected function baseUsersQuery()
+    {
+        return Authentication::query()
+            ->leftJoin('users', 'auths.id', '=', 'users.auth_id')
+            ->select(
+                'auths.id',
+                'auths.username',
+                'users.display_name',
+                'auths.email',
+                'auths.is_admin',
+                'users.created_at',
+                'auths.updated_at as auth_updated_at',
+                'users.updated_at'
+            );
     }
 
     public function usersPage()
     {
-        $users = Authentication::query()
-            ->leftJoin('users', 'authentications.username', '=', 'users.username')
-            ->select(
-                'authentications.id',
-                'authentications.username',
-                'users.display_name',
-                'authentications.email',
-                'authentications.is_admin',
-                'users.created_at',
-                'authentications.updated_at as auth_updated_at',
-                'users.updated_at'
-            )
-            ->orderBy('authentications.id')
-            ->get();
-
-        return view('admin.users', ['users' => $users]);
+        return view('admin.users');
     }
 
-    public function createUserWeb(Request $request)
+    public function dashboard()
+    {
+        $latestSessions = PomodoroHistory::query()
+            ->with('user.auth')
+            ->latest()
+            ->limit(10)
+            ->get()
+            ->map(fn (PomodoroHistory $session) => $this->transformPomodoroSession($session))
+            ->values();
+
+        return $this->apiSuccess('Dashboard admin berhasil diambil.', [
+            'stats' => [
+                'total_users' => Authentication::count(),
+                'total_sessions' => PomodoroHistory::count(),
+                'active_today' => PomodoroHistory::query()
+                    ->whereDate('created_at', now()->toDateString())
+                    ->distinct()
+                    ->count('user_id'),
+            ],
+            'latest_sessions' => $latestSessions,
+        ]);
+    }
+
+    public function pomodoroSessions()
+    {
+        $sessions = PomodoroHistory::query()
+            ->with('user.auth')
+            ->latest()
+            ->limit(50)
+            ->get()
+            ->map(fn (PomodoroHistory $session) => $this->transformPomodoroSession($session))
+            ->values();
+
+        return $this->apiSuccess('Data pomodoro admin berhasil diambil.', [
+            'sessions' => $sessions,
+        ]);
+    }
+
+    public function index()
+    {
+        $users = $this->baseUsersQuery()
+            ->orderBy('auths.id')
+            ->get()
+            ->map(fn (object $row) => $this->transformUserRow($row))
+            ->values();
+
+        return $this->apiSuccess('Daftar user berhasil diambil.', [
+            'users' => $users,
+        ]);
+    }
+
+    public function store(Request $request)
     {
         $validated = $request->validate([
             'username' => ['string', 'required', 'max:100'],
             'password' => ['string', 'required', 'min:8'],
-            'email' => ['string', 'required', 'email', 'max:100', 'unique:authentications,email'],
+            'email' => ['string', 'required', 'email', 'max:100', 'unique:auths,email'],
         ]);
 
-        $display_name = $validated['username'];
-        $natural_username = $validated['username'];
-        $natural_password = $validated['password'];
-        $email = $validated['email'];
+        $displayName = $validated['username'];
+        $uniqueUsername = $this->generateUniqueUsername($validated['username']);
+        $hashedPassword = Hash::make($validated['password']);
 
-        if (PHP_OS_FAMILY == 'Windows') {
-            $bin = base_path('go\bin\win\suffix_username.exe');
-        } elseif (PHP_OS_FAMILY == 'Linux') {
-            $bin = base_path('go/bin/suffix_username');
-        }
-
-        $process = $this->goProcess([$bin, $natural_username]);
-        $process->setTimeout(3);
-        $process->run();
-
-        if (! $process->isSuccessful()) {
-            logger()->error('ada kesalahan pada binary suffix_username', ['err' => $process->getErrorOutput()]);
-            return $this->redirectCreateUserFormError('Gagal membuat username unik.');
-        }
-
-        $unique_username = trim($process->getOutput());
-
-        if (PHP_OS_FAMILY == 'Windows') {
-            $bin = base_path('go\bin\win\hashingbcry.exe');
-        } elseif (PHP_OS_FAMILY == 'Linux') {
-            $bin = base_path('go/bin/hashingbcry');
-        }
-
-        $process = $this->goProcess([$bin, '-e', $natural_password]);
-        $process->setTimeout(4);
-        $process->run();
-
-        if (! $process->isSuccessful()) {
-            logger()->error('ada kesalahan pada hashingbcry', ['err' => $process->getErrorOutput()]);
-            return $this->redirectCreateUserFormError('Gagal menyimpan password user.');
-        }
-
-        $hashed_password = trim($process->getOutput());
-
-        DB::transaction(function () use ($unique_username, $email, $hashed_password, $display_name) {
-            Authentication::create([
-                'username' => $unique_username,
-                'email' => $email,
-                'password' => $hashed_password,
+        DB::transaction(function () use ($uniqueUsername, $validated, $hashedPassword, $displayName) {
+            $auth = Authentication::create([
+                'username' => $uniqueUsername,
+                'email' => $validated['email'],
+                'password' => $hashedPassword,
             ]);
 
             User::create([
-                'username' => $unique_username,
-                'display_name' => $display_name,
-                'email' => $email,
+                'auth_id' => $auth->id,
+                'display_name' => $displayName,
                 'profile_picture' => null,
             ]);
         });
 
-        return redirect()
-            ->route('admin.users')
-            ->with('success', 'User berhasil ditambahkan.');
+        $created = $this->baseUsersQuery()
+            ->where('auths.username', $uniqueUsername)
+            ->firstOrFail();
+
+        return $this->apiSuccess('User berhasil ditambahkan.', [
+            'user' => $this->transformUserRow($created),
+        ], 201);
     }
 
-    public function updateUserWeb(Request $request, Authentication $user)
+    public function update(Request $request, Authentication $user)
     {
+        $request->merge([
+            'display_name' => $request->input('display_name', $request->input('displayName')),
+            'is_admin' => $request->input('is_admin', $request->input('isAdmin')),
+        ]);
+
         $validated = $request->validate([
-            'displayName' => ['required', 'string', 'max:100'],
+            'display_name' => ['required', 'string', 'max:100'],
             'password' => ['nullable', 'string', 'min:8'],
             'email' => [
                 'required', 'string', 'email', 'max:100',
-                Rule::unique('authentications', 'email')->ignore($user->id),
+                Rule::unique('auths', 'email')->ignore($user->id),
             ],
-            'isAdmin' => ['required', 'integer', 'in:0,1'],
+            'is_admin' => ['required', 'integer', 'in:0,1'],
         ]);
 
         $password = null;
-        if (! is_null($validated['password'])) {
-            if (PHP_OS_FAMILY == 'Windows') {
-                $bin = base_path('go\bin\win\hashingbcry.exe');
-            } elseif (PHP_OS_FAMILY == 'Linux') {
-                $bin = base_path('go/bin/hashingbcry');
-            }
-
-            $process = $this->goProcess([$bin, '-e', $validated['password']]);
-            $process->setTimeout(4);
-            $process->run();
-
-            if (! $process->isSuccessful()) {
-                logger()->error('ada kesalahan pada hashingbcry', ['err' => $process->getErrorOutput()]);
-                return $this->redirectUserFormError('Gagal mengubah password user.');
-            }
-
-            $password = trim($process->getOutput());
+        if (array_key_exists('password', $validated) && ! is_null($validated['password'])) {
+            $password = Hash::make($validated['password']);
         }
 
         DB::transaction(function () use ($user, $validated, $password) {
             $payload = [
                 'email' => $validated['email'],
-                'is_admin' => $validated['isAdmin'],
+                'is_admin' => $validated['is_admin'],
             ];
 
             if (! is_null($password)) {
@@ -159,22 +184,24 @@ class AdminController extends Controller
 
             $user->update($payload);
 
-            User::where('username', $user->username)->update([
-                'display_name' => $validated['displayName'],
+            User::where('auth_id', $user->id)->update([
+                'display_name' => $validated['display_name'],
             ]);
         });
 
-        return redirect()
-            ->route('admin.users')
-            ->with('success', 'User berhasil diupdate.');
+        $updated = $this->baseUsersQuery()
+            ->where('auths.id', $user->id)
+            ->firstOrFail();
+
+        return $this->apiSuccess('User berhasil diupdate.', [
+            'user' => $this->transformUserRow($updated),
+        ]);
     }
 
-    public function deleteUserWeb(Authentication $user)
+    public function destroy(Authentication $user)
     {
         $user->delete();
 
-        return redirect()
-            ->route('admin.users')
-            ->with('success', 'User berhasil dihapus.');
+        return $this->apiSuccess('User berhasil dihapus.');
     }
 }

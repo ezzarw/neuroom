@@ -3,44 +3,67 @@
 namespace App\Http\Controllers;
 
 use App\Models\PomodoroHistory;
+use App\Models\User;
 use Illuminate\Http\Request;
 
 class PomodoroController extends Controller
 {
-    // Method ini disimpan dulu untuk integrasi frontend berikutnya.
-    public function post_to_pomodoro_history(Request $request)
+    public function store(Request $request)
     {
-        $current_date = now()->toDateString();
-        $session = 1;
-        $username = $request->user()->username;
-        $user_id = $request->user()->id;
-        // nanti yang diisi itu username, user_id, session, sama date
-        PomodoroHistory::create([
-            'username' => $username,
-            'user_id' => $user_id,
-            'session' => $session,
-            'date' => $current_date
+        $validated = $request->validate([
+            'duration_seconds' => ['required', 'integer', 'min:1'],
         ]);
 
-        return back()
-            ->with('success', 'Data pomodoro berhasil ditambahkan.');
+        $profile = User::query()
+            ->where('auth_id', $request->user()->id)
+            ->firstOrFail();
+
+        $session = PomodoroHistory::query()
+            ->where('user_id', $profile->id)
+            ->whereDate('created_at', now()->toDateString())
+            ->count() + 1;
+
+        $history = PomodoroHistory::create([
+            'user_id' => $profile->id,
+            'session' => $session,
+            'duration_seconds' => $validated['duration_seconds'],
+        ]);
+
+        return $this->apiSuccess('Data pomodoro berhasil ditambahkan.', [
+            'session' => [
+                'id' => $history->id,
+                'session' => $history->session,
+                'date' => $history->created_at?->toDateString(),
+                'duration_seconds' => (int) $history->duration_seconds,
+                'duration' => $this->formatDuration((int) $history->duration_seconds),
+                'created_at' => $this->formatDateTime($history->created_at),
+            ],
+        ], 201);
     }
-    
-    // Method ini disimpan dulu untuk integrasi frontend berikutnya.
-    public function get_to_pomodoro_history(Request $request)
+
+    public function history(Request $request)
     {
-        $current_date = now()->toDateString();
-        $id = $request->user()->id;
+        $profile = User::query()
+            ->where('auth_id', $request->user()->id)
+            ->firstOrFail();
 
-        $output = PomodoroHistory::where('user_id', $id)->where('date', $current_date)->count();
+        $sessions = PomodoroHistory::query()
+            ->where('user_id', $profile->id)
+            ->latest()
+            ->limit(20)
+            ->get()
+            ->map(fn (PomodoroHistory $history) => [
+                'id' => $history->id,
+                'session' => $history->session,
+                'date' => $history->created_at?->toDateString(),
+                'duration_seconds' => (int) ($history->duration_seconds ?? 0),
+                'duration' => $this->formatDuration((int) ($history->duration_seconds ?? 0)),
+                'created_at' => $this->formatDateTime($history->created_at),
+            ])
+            ->values();
 
-        if ($output == 0) {
-            return back()
-                ->with('error', 'Data pomodoro hari ini tidak ditemukan.');
-        }
-
-        return back()
-            ->with('success', 'Data pomodoro berhasil diambil.')
-            ->with('sesi_per_hari', $output);
+        return $this->apiSuccess('Riwayat pomodoro berhasil diambil.', [
+            'sessions' => $sessions,
+        ]);
     }
 }

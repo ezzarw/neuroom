@@ -12,116 +12,104 @@ class SummaryController extends Controller
     {
         $request->validate([
             'document' => 'required|file|mimes:pdf,ppt,pptx,doc,docx,xls,xlsx,txt,csv,rtf,odt,ods,odp|max:20480',
-            'bahasa' => 'required|string', // bahasa harus indonesia kalo gak english
+            'bahasa' => 'required|string|in:indonesia,english',
         ]);
 
         $document = $request->file('document');
-        $bahasa = $request->bahasa;
-        $bahasa_list = ['indonesia', 'english'];
-        if ($bahasa == $bahasa_list[0]) {
-            $bahasa = 'pakai bahasa indonesia';
-        } elseif ($bahasa == $bahasa_list[1]) {
-            $bahasa = 'use english language';
-        } else {
-            return back()
-                ->withInput()
-                ->withErrors(['bahasa' => 'Bahasa harus indonesia atau english.']);
-        }
-        // ada $bahasa dan ada $mode belajar
+        $bahasa = $request->string('bahasa')->toString();
 
-        // format nama file biar unik
         $dt = new DateTime;
         $formatted_date = str_replace([' ', ':', '.', '-'], ['_', '', '', ''], $dt->format('Y-m-d H:i:s.u'));
         $sanitized_name = uniqid().'_'.$formatted_date.'.'.$document->getClientOriginalExtension();
         $stored_path = $document->storeAs('document_for_summaries', $sanitized_name, 'local');
+
         if ($stored_path === false) {
-            return back()
-                ->withInput()
-                ->withErrors(['document' => 'Gagal menyimpan dokumen']);
+            return $this->apiError('Gagal menyimpan dokumen.', 500);
         }
 
-        // bersihin text biar lebih aman
-        $instruction = "Buat ringkasan poin-poin penting dari ". strtolower($document->getClientOriginalExtension()) . " tapi ingat, jangan pake seperti 'Dokumen ini... atau " . strtolower($document->getClientOriginalExtension()) . " ini... tapi langsung ke topik' yang aku kirim ini, $bahasa";
-        $mode = 'summarize';
-        $max_output_tokens = 1200;
+        $instruction = $bahasa === 'english'
+            ? 'Summarize the uploaded document into concise bullet points. Do not start with phrases like "This document". Go straight to the main ideas and use English. Answer with MarkDown format'
+            : 'Buat ringkasan dokumen yang diunggah dalam poin-poin singkat. Jangan mulai dengan kalimat seperti "Dokumen ini". Langsung ke inti topik dan gunakan bahasa Indonesia. jawab dengan format markdown';
 
-        $payload = [
-            'task' => $mode,
-            'instruction' => $instruction,
-            'document' => [
-                'original_name' => $document->getClientOriginalName(),
-                'stored_name' => $sanitized_name,
-                'extension' => strtolower($document->getClientOriginalExtension()),
-                'mime_type' => $document->getMimeType(),
-                'size' => $document->getSize(),
-                'stored_path' => $stored_path,
-            ],
-            'parameters' => [
-                'max_output_tokens' => $max_output_tokens,
-            ],
-        ];
+        $api_key = env('GEMINI_API_KEY');
 
-        $backend_url = trim((string) env('AI_BACKEND_URL'));
-
-        if ($backend_url === '') {
-            // Frontend final belum disepakati, jadi backend mengembalikan
-            // flash session generik agar nanti bisa dipakai dari halaman mana pun.
-            return back()
-                ->withInput()
-                ->with('success', 'Dokumen berhasil diproses.')
-                ->with('summary_result', [
-                    'message' => 'AI backend endpoint belum dikonfigurasi',
-                    'status' => 'not_configured',
-                    'output' => null,
-                ]);
+        if ($api_key === null || $api_key === '') {
+            return $this->apiSuccess(
+                'Dokumen berhasil diupload, tetapi integrasi AI belum dikonfigurasi.',
+                [
+                    'summary' => [
+                        'status' => 'fallback',
+                        'output' => [
+                            'Nama file: '.$document->getClientOriginalName(),
+                            'Bahasa ringkasan: '.$bahasa,
+                            'Ukuran file: '.$document->getSize().' byte',
+                        ],
+                    ],
+                ],
+                200,
+                [
+                    'fallback' => true,
+                ]
+            );
         }
 
-        try {
-            $response = Http::timeout((int) env('AI_BACKEND_TIMEOUT'))
-                ->acceptJson()
-                ->attach(
-                    'document_file',
-                    file_get_contents($document->getRealPath()),
-                    $sanitized_name,
-                    ['Content-Type' => $document->getMimeType()]
-                )
-                ->post($backend_url, [
-                    'task' => $payload['task'],
-                    'instruction' => $payload['instruction'],
-                    'document' => json_encode($payload['document']),
-                    'parameters' => json_encode($payload['parameters']),
-                ]);
+        $mimeType = $document->getMimeType() ?: 'application/octet-stream';
+        $base64Document = base64_encode(file_get_contents($document->getRealPath()));
 
-            if (! $response->successful()) {
-                logger()->warning('AI backend request gagal', [
-                    'status' => $response->status(),
-                    'body' => $response->body(),
-                ]);
+        $response = Http::timeout(90)->withHeaders([
+            'Accept' => 'application/json',
+            'x-goog-api-key' => $api_key,
+        ])->post('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent', [
+            'contents' => [
+                [
+                    'role' => 'user',
+                    'parts' => [
+                        ['text' => $instruction],
+                        [
+                            'inline_data' => [
+                                'mime_type' => $mimeType,
+                                'data' => $base64Document,
+                            ],
+                        ],
+                    ],
+                ],
+            ],
+        ]);
 
-                return back()
-                    ->withInput()
-                    ->withErrors(['summary' => 'AI backend mengembalikan error.']);
-            }
-
-            $parsed = $response->json();
-            $output = $parsed['output'] ?? null;
-
-            return back()
-                ->withInput()
-                ->with('success', 'Dokumen berhasil diproses.')
-                ->with('summary_result', [
-                    'message' => 'AI backend berhasil dipanggil',
-                    'status' => 'success',
-                    'output' => $output,
-                ]);
-        } catch (\Throwable $e) {
-            logger()->error('AI backend tidak bisa diakses', [
-                'message' => $e->getMessage(),
+        if (! $response->successful()) {
+            logger()->error('gemini summary gagal', [
+                'status' => $response->status(),
+                'body' => $response->body(),
             ]);
 
-            return back()
-                ->withInput()
-                ->withErrors(['summary' => 'AI backend tidak bisa diakses']);
+            return $this->apiError('Gagal membuat ringkasan dari layanan AI.', 502);
         }
+
+        $data = $response->json();
+        $text = data_get($data, 'candidates.0.content.parts.0.text');
+
+        if (! is_string($text) || trim($text) === '') {
+            logger()->warning('respons gemini tidak berisi text', ['data' => $data]);
+
+            return $this->apiError('Respons AI tidak valid.', 502);
+        }
+
+        $output = collect(preg_split('/\r?\n/', trim($text)))
+            ->map(fn (?string $line) => trim((string) $line))
+            ->filter()
+            ->values()
+            ->all();
+
+        return $this->apiSuccess('Ringkasan berhasil dibuat.', [
+            'summary' => [
+                'status' => 'success',
+                'output' => $output,
+                'document' => [
+                    'name' => $document->getClientOriginalName(),
+                    'path' => $stored_path,
+                    'mime_type' => $mimeType,
+                ],
+            ],
+        ]);
     }
 }

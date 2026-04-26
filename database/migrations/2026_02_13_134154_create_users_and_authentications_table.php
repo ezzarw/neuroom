@@ -11,7 +11,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('authentications', function (Blueprint $table) {
+        Schema::create('auths', function (Blueprint $table) {
             $table->id();
             $table->string('username')->unique();
             $table->string('email')->unique();
@@ -20,26 +20,28 @@ return new class extends Migration
             $table->timestamps();
         });
 
+
+
+
+
+
         Schema::create('users', function (Blueprint $table) {
             $table->id();
-            $table->string('username', 100);
+            $table->unsignedBigInteger('auth_id');
             $table->string('display_name', 100);
-            $table->string('email', 100)->nullable();
             $table->string('profile_picture')->nullable();
             $table->timestamps();
 
-            $table->foreign('username')
-                ->references('username')
-                ->on('authentications')
-                ->cascadeOnUpdate()
-                ->cascadeOnDelete();
 
-            $table->foreign('email')
-                ->references('email')
-                ->on('authentications')
+            $table->foreign('auth_id')
+                ->references('id')
+                ->on('auths')
                 ->cascadeOnUpdate()
                 ->cascadeOnDelete();
         });
+
+
+        
 
         Schema::create('sessions', function (Blueprint $table) {
             $table->string('id')->primary();
@@ -58,6 +60,6 @@ return new class extends Migration
     {
         Schema::dropIfExists('sessions');
         Schema::dropIfExists('users');
-        Schema::dropIfExists('authentications');
+        Schema::dropIfExists('auths');
     }
 };
