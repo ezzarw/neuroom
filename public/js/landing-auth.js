@@ -40,6 +40,11 @@ async function submitAuth({ form, endpoint, button, feedback }) {
       window.location.href = response.meta.redirect_to;
     }
   } catch (error) {
+    if (error.status === 409 && error.payload?.meta?.redirect_to) {
+      window.location.href = error.payload.meta.redirect_to;
+      return;
+    }
+
     const message = error.payload?.errors
       ? Object.values(error.payload.errors).flat()[0]
       : error.message;

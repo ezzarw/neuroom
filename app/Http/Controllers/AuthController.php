@@ -12,6 +12,13 @@ use Illuminate\Support\Facades\Hash;
 
 class AuthController extends Controller
 {
+    protected function redirectPathForAuthenticatedUser(Authentication $auth): string
+    {
+        return (int) $auth->is_admin === 1
+            ? route('admin.dashboard')
+            : route('utama');
+    }
+
     protected function transformAuthenticatedUser(Authentication $auth): array
     {
         $profile = User::query()
@@ -34,7 +41,9 @@ class AuthController extends Controller
     public function register(RegisterUserRequest $request)
     {
         if ($request->user() !== null) {
-            return $this->apiError('Session aktif sudah ada.', 409);
+            return $this->apiError('Session aktif sudah ada.', 409, [], [
+                'redirect_to' => $this->redirectPathForAuthenticatedUser($request->user()),
+            ]);
         }
 
         $display_name = $request->username;
@@ -83,7 +92,9 @@ class AuthController extends Controller
         ]);
 
         if ($request->user() !== null) {
-            return $this->apiError('Session aktif sudah ada.', 409);
+            return $this->apiError('Session aktif sudah ada.', 409, [], [
+                'redirect_to' => $this->redirectPathForAuthenticatedUser($request->user()),
+            ]);
         }
 
         $auth = Authentication::query()->where('email', $request->email)->first();
@@ -102,9 +113,7 @@ class AuthController extends Controller
         Auth::guard('web')->login($auth);
         $request->session()->regenerate();
 
-        $redirectTo = (int) $auth->is_admin === 1
-            ? route('admin.dashboard')
-            : route('utama');
+        $redirectTo = $this->redirectPathForAuthenticatedUser($auth);
 
         return $this->apiSuccess(
             'Login berhasil.',
