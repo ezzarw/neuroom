@@ -1,24 +1,33 @@
 # Neuroom - README DevOps
 
-Panduan ini fokus ke kebutuhan DevOps untuk menjalankan Neuroom di environment lokal, staging, dan production.
+Panduan ini fokus ke setup dan operasional Neuroom di environment lokal, staging, dan production.
 
 Dokumentasi teknis:
+
 - Endpoint: `docs/ENDPOINT.md`
-- Panduan frontend agar lolos validasi backend: `docs/PANDUAN_FRONTEND_VALIDATION.md`
+- Backend: `docs/PANDUAN_BACKEND.md`
+- Frontend: `docs/PANDUAN_FRONTEND_VALIDATION.md`
+- Standar JSON API: `docs/API_RESPONSE_JSON.md`
+- Catatan keamanan operasional: `docs/TUGAS_BIAR_AMAN.md`
 
-## 1. Ringkasan Arsitektur
+## Ringkasan Arsitektur
 
-- Backend: Laravel 12 (PHP 8.2+)
-- Frontend: Blade + Vite + TailwindCSS
+- Backend: Laravel 12
+- Frontend: Blade + JavaScript fetch helper
 - Database utama: MySQL / MariaDB
-- Queue worker: Laravel queue (`php artisan queue:listen`)
-- Process manager production: `systemd` (direkomendasikan)
-- Web server: Nginx + `php-fpm` (direkomendasikan), Apache juga bisa
+- Session dan cache: Redis
+- API dinamis: `/api/v1/...`
+- Autentikasi: session guard `web`
+- Queue worker: Laravel queue
+- Web server: Nginx + `php-fpm` direkomendasikan
 
 Catatan produk:
-- Login dan register ada di satu halaman frontend, digabung dengan landing page.
 
-## 2. Dependency Sistem
+- landing page memuat login dan register
+- halaman utama tetap dirender Blade
+- data interaktif frontend mengambil JSON dari `/api/v1`
+
+## Dependency Sistem
 
 ### Wajib
 
@@ -34,31 +43,16 @@ Catatan produk:
   - `tokenizer`
   - `xml`
 - `composer`
-- `mysql` (atau MariaDB kompatibel)
+- `mysql` atau MariaDB kompatibel
+- `redis` server
 - `nodejs` 18+ dan `npm`
-- `go`
 - `git`
 
-### Untuk server production (direkomendasikan)
+Untuk menjalankan test bawaan yang memakai SQLite in-memory, extension `pdo_sqlite` juga dibutuhkan.
 
-- `nginx`
-- `php-fpm` (versi PHP yang sama dengan CLI, minimal 8.2)
-- `supervisor` atau `systemd` untuk jaga queue worker tetap hidup
+## Setup Pertama Kali
 
-## 3. Struktur Environment
-
-File penting:
-- `.env`
-- `storage/`
-- `bootstrap/cache/`
-
-Pastikan permission write untuk user service web (`www-data` atau setara) pada:
-- `storage`
-- `bootstrap/cache`
-
-## 4. Setup Pertama Kali
-
-1. Clone dan install dependency backend:
+1. Install dependency backend:
 
 ```bash
 composer install
@@ -71,7 +65,7 @@ cp .env.example .env
 php artisan key:generate
 ```
 
-3. Atur koneksi DB di `.env`:
+3. Atur DB di `.env`:
 
 ```env
 DB_CONNECTION=mysql
@@ -82,19 +76,38 @@ DB_USERNAME=neuroom_user
 DB_PASSWORD=your_password
 ```
 
-4. Migrasi database:
+4. Jika ingin memakai fitur summary AI, isi:
+
+```env
+GEMINI_API_KEY=your_key
+```
+
+5. Session dan cache sekarang default ke Redis. Pastikan Redis aktif, lalu set env berikut:
+
+```env
+SESSION_DRIVER=redis
+SESSION_CONNECTION=default
+CACHE_STORE=redis
+REDIS_CLIENT=predis
+REDIS_HOST=127.0.0.1
+REDIS_PORT=6379
+REDIS_DB=0
+REDIS_CACHE_DB=1
+```
+
+6. Jalankan migration:
 
 ```bash
 php artisan migrate
 ```
 
-5. Install dependency frontend:
+7. Install dependency frontend:
 
 ```bash
 npm install
 ```
 
-6. Build asset (untuk production) atau jalankan dev asset server:
+8. Jalankan build atau dev server asset:
 
 ```bash
 npm run build
@@ -102,11 +115,9 @@ npm run build
 npm run dev
 ```
 
-## 5. Menjalankan Aplikasi
+## Menjalankan Aplikasi
 
-### Mode development cepat
-
-Jalankan semua proses dev sekaligus (server + queue + log + vite):
+### Mode cepat
 
 ```bash
 composer run dev
@@ -123,25 +134,51 @@ php artisan serve
 Terminal 2:
 
 ```bash
-php artisan queue:listen --tries=1
-```
-
-Terminal 3:
-
-```bash
 npm run dev
 ```
 
-## 6. Checklist Deploy Production
+Terminal 3 bila queue dipakai:
+
+```bash
+php artisan queue:listen --tries=1
+```
+
+## Debugging dan Verifikasi
+
+Cek route:
+
+```bash
+php artisan route:list
+php artisan route:list --path=api/v1
+```
+
+Jalankan syntax check cepat:
+
+```bash
+php -l routes/api.php
+php -l bootstrap/app.php
+```
+
+Jalankan test:
+
+```bash
+php artisan test
+```
+
+Catatan:
+
+- test API saat ini butuh driver SQLite untuk mode in-memory, kecuali konfigurasi test DB diubah
+
+## Deploy Production
 
 1. Pull source code terbaru.
-2. Install dependency tanpa dev package:
+2. Install dependency backend tanpa package dev:
 
 ```bash
 composer install --no-dev --optimize-autoloader
 ```
 
-3. Siapkan `.env` production (APP_ENV, APP_DEBUG=false, DB, CACHE, QUEUE, MAIL).
+3. Siapkan `.env` production.
 4. Jalankan migration:
 
 ```bash
@@ -163,39 +200,12 @@ php artisan route:cache
 php artisan view:cache
 ```
 
-7. Restart service terkait (`php-fpm`, queue worker).
+7. Restart service terkait.
 
-## 7. Service yang Perlu Dimonitor
+## Catatan Operasional
 
-- `nginx` / `apache2`
-- `php-fpm`
-- `mysql`
-- queue worker (systemd/supervisor)
-
-Contoh health check dasar:
-- HTTP app return `200`
-- koneksi DB sukses
-- queue worker aktif
-- tidak ada error fatal di log Laravel
-
-## 8. Logging dan Debugging
-
-- Log aplikasi: `storage/logs/laravel.log`
-- Cek route:
-
-```bash
-php artisan route:list
-```
-
-- Jalankan test:
-
-```bash
-php artisan test
-```
-
-## 9. Catatan Operasional
-
-- Jika deploy pakai Nginx, arahkan `root` ke folder `public/`.
-- Jangan commit `.env` ke repository.
-- Sinkronkan versi PHP CLI dan `php-fpm` agar behavior konsisten.
-- Untuk scale worker, gunakan beberapa instance queue worker via `systemd` atau `supervisor`.
+- arahkan docroot ke folder `public/`
+- jangan commit `.env`
+- samakan versi PHP CLI dan web server
+- monitor `storage/logs/laravel.log`
+- kalau route atau kontrak API berubah, sinkronkan frontend dengan `/api/v1`

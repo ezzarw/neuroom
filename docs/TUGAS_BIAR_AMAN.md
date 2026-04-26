@@ -1,104 +1,113 @@
 # Tugas Biar Aman
 
-Dokumen ini merangkum hal yang sudah diamankan dan hal yang masih perlu dijaga setelah Neuroom kembali ke flow web Laravel biasa.
+Dokumen ini merangkum apa yang sudah diamankan di Neuroom dan apa yang masih perlu dijaga setelah backend dan frontend disinkronkan ke kontrak API terbaru.
 
-## Yang Sudah Aman Dibanding Sebelumnya
+## Yang Sudah Aman
 
-Perubahan yang sudah selesai:
+- autentikasi tetap berbasis session backend
+- proteksi admin tetap dicek di server oleh `admin.validate`
+- frontend tidak perlu memegang bearer token
+- route API resmi sudah dipusatkan ke `/api/v1/...`
+- response JSON backend sudah seragam
+- frontend fetch utama sudah diarahkan ke kontrak JSON baru
 
-- route aplikasi tidak lagi bergantung pada `routes/api.php`
-- autentikasi memakai session web, bukan bearer token
-- helper response JSON kustom sudah dihapus
-- admin users sudah pindah ke Blade + form submit biasa
-- summary sudah submit ke route web biasa
-- route Sanctum tambahan untuk flow lama sudah dimatikan
+## Yang Baru Selesai Diupdate
 
-Implikasinya:
-
-- browser tidak perlu menyimpan token auth mentah
-- backend tetap jadi sumber kebenaran untuk auth dan role
-- proteksi admin tetap dicek di server
+- route `api/v1` untuk auth, profile, summary, pomodoro, dan admin aktif kembali
+- helper response JSON standar sudah dipasang di base controller
+- validasi dan auth error JSON sudah konsisten dari layer exception
+- frontend sekarang membaca:
+  - `response.data`
+  - `response.errors`
+  - `response.meta`
+- dokumentasi kontrak API sekarang ada di `docs/API_RESPONSE_JSON.md`
 
 ## Risiko Yang Harus Tetap Dijaga
 
-### 1. Jangan percaya state auth di frontend
+### 1. Jangan percaya auth state lokal
 
-Yang tidak boleh dijadikan sumber kebenaran:
+Yang tidak boleh jadi sumber kebenaran:
 
 - `auth_id`
 - `auth_email`
 - `auth_username`
 - `auth_is_admin`
-- token login apa pun di `localStorage`
+- flag login apa pun di `localStorage`
 
 Yang benar:
 
-- status login ditentukan oleh session backend
-- akses admin ditentukan oleh middleware `admin.validate`
-- halaman private dijaga middleware `auth`
+- status login ditentukan backend
+- akses admin ditentukan middleware server
+- cookie session browser yang membawa konteks login
 
-### 2. Jangan hidupkan lagi pola route API tanpa kebutuhan jelas
+### 2. Jangan kembali ke endpoint lama
 
-Kalau nanti ada request fitur baru, default yang dipakai harus:
+Yang harus dipakai:
 
-- route di `web.php`
-- form Blade atau redirect flow
-- CSRF standar Laravel
+- `/api/v1/...`
 
-Jangan langsung kembali ke:
+Yang harus dihindari:
 
-- `/api/...`
-- helper JSON kustom
-- token auth di frontend
+- `/api/auth/...`
+- `/api/admin/...`
+- `/api/me`
+- `/api/summary`
+- `/api/pomodoro/history`
 
-### 3. Runtime server harus benar
+### 3. Jangan biarkan shape JSON liar
 
-Verifikasi manual terakhir menunjukkan aplikasi bisa sehat, tetapi environment server tetap bisa bikin aplikasi terlihat rusak kalau:
+Yang harus dipakai:
 
-- docroot tidak diarahkan ke `public/`
-- versi PHP web server berbeda dari PHP CLI
+- `success`
+- `message`
+- `data`
+- `errors`
+- `meta`
 
-Ini penting karena masalah seperti itu terlihat seperti bug aplikasi padahal akar masalahnya di server.
+Yang harus dihindari:
+
+- top-level `user`, `users`, `sessions`, `stats`, `redirect_to` tanpa pembungkus
+
+### 4. Runtime server tetap penting
+
+Masalah yang masih bisa bikin aplikasi terlihat rusak padahal bukan bug aplikasi:
+
+- docroot tidak ke `public/`
+- versi PHP CLI beda dengan web server
+- extension DB/test tidak lengkap
 
 ## Flow Aman Yang Dipertahankan
 
-1. User login ke route web biasa
-2. Backend validasi kredensial
-3. Backend menyimpan auth di session
-4. Browser membawa cookie session secara otomatis
-5. Route private dicek dengan middleware `auth`
-6. Route admin dicek dengan `admin.validate`
-7. Logout dilakukan lewat backend
+1. User login lewat endpoint auth berbasis session.
+2. Backend memvalidasi kredensial.
+3. Backend menyimpan session.
+4. Browser otomatis membawa cookie session.
+5. Frontend fetch data ke `/api/v1/...` dengan CSRF token.
+6. Route admin tetap dijaga server.
+7. Logout tetap dilakukan dari backend.
 
-## Checklist Yang Sudah Selesai
-
-### Backend
-
-- [x] Hapus `routes/api.php`
-- [x] Pusatkan route aplikasi ke `routes/web.php`
-- [x] Hapus helper response JSON kustom
-- [x] Gunakan redirect, flash session, dan Blade
-- [x] Matikan flow Sanctum yang dipakai untuk pola lama
-- [x] Pastikan admin route tetap dijaga middleware
-
-### Frontend
-
-- [x] Admin users tidak lagi bergantung pada endpoint API terpisah
-- [x] Summary tidak lagi bergantung pada AJAX API lama
-- [x] Navigasi utama tidak lagi mengarah ke file `.html` lama yang sudah rusak
-- [x] Browser smoke test dasar sudah dilakukan untuk halaman utama
-
-## Checklist Yang Masih Perlu Dilanjutkan
+## Checklist Saat Ini
 
 ### Backend
 
-- [ ] Tambah feature test untuk auth, admin users, summary, user profile, dan pomodoro
-- [ ] Evaluasi apakah `laravel/sanctum` masih perlu dihapus dari dependency
-- [x] Hapus route test `_tmp` yang tidak dipakai
-- [ ] Pasang route final untuk user profile dan pomodoro setelah kontrak frontend jelas
+- [x] Route API resmi ada di `routes/api.php`
+- [x] Prefix API dipusatkan ke `/api/v1`
+- [x] Response JSON distandardkan
+- [x] Error validasi JSON distandardkan
+- [x] Error auth/admin JSON distandardkan
+- [ ] Jalankan ulang feature test setelah driver DB test tersedia
 
 ### Frontend
 
-- [ ] Hindari menyimpan data auth sensitif di storage browser
-- [ ] Rapikan warning minor browser seperti `autocomplete` form
-- [ ] Lakukan smoke test lagi setiap ada perubahan route atau JavaScript halaman
+- [x] Helper fetch memakai cookie session + CSRF
+- [x] Endpoint utama diarahkan ke `/api/v1`
+- [x] Payload dibaca dari `data` dan `meta`
+- [ ] Smoke test ulang semua halaman setelah perubahan kontrak
+- [ ] Cari sisa file JS yang masih memanggil endpoint lama
+
+## Langkah Lanjut Yang Disarankan
+
+1. Aktifkan `pdo_sqlite` atau siapkan DB test khusus.
+2. Jalankan ulang test feature API.
+3. Lakukan smoke test login, profile, summary, pomodoro, admin dashboard, admin users, dan admin pomodoro.
+4. Hapus referensi dokumentasi atau kode yang masih menyebut flow lama.

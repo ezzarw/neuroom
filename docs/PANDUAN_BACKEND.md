@@ -1,113 +1,137 @@
 # Panduan Backend Neuroom
 
-Dokumen ini mencatat kondisi backend Neuroom setelah flow aplikasi dikembalikan ke pola Laravel web biasa.
+Dokumen ini menjelaskan kondisi backend Neuroom yang berlaku sekarang.
 
-## Tujuan
+## Kondisi Saat Ini
 
-Backend sekarang diarahkan ke pola bawaan Laravel:
+Backend sekarang memakai pola campuran yang jelas:
 
-- route aplikasi dipusatkan di `routes/web.php`
-- autentikasi memakai session guard `web`
-- form submit memakai redirect + flash session
-- validasi memakai validator Laravel
-- halaman dirender Blade
-- tidak ada helper response JSON kustom
+- halaman aplikasi tetap lewat `routes/web.php` dan Blade
+- data dinamis untuk frontend memakai JSON API di `routes/api.php` dengan prefix `/api/v1`
+- autentikasi tetap session-based dengan guard `web`
+- session dan cache default sekarang disimpan di Redis
+- request API tidak memakai bearer token
+- response JSON sudah distandardkan
 
-## Perubahan Yang Sudah Selesai
+## Yang Baru Diperbarui
 
-### 1. Route API dipensiunkan
+Perubahan terbaru yang sudah masuk ke code:
 
-Status:
-- `routes/api.php` sudah dihapus
-- bootstrap route API sudah tidak dipakai lagi
-- route aktif aplikasi sekarang ada di `routes/web.php`
+1. Route API `/api/v1` dihidupkan kembali dan sekarang aktif untuk auth, profile, summary, pomodoro, dan admin.
+2. Semua response JSON backend diseragamkan ke format:
+   - `success`
+   - `message`
+   - `data`
+   - `errors`
+   - `meta`
+3. Exception JSON untuk validasi dan auth dirender konsisten dari `bootstrap/app.php`.
+4. Frontend fetch diarahkan ke `/api/v1/...` dan membaca payload baru dari `data` dan `meta`.
+5. Dokumentasi lama yang menyebut “web-only tanpa API” sudah tidak lagi akurat.
 
-Implikasi:
-- tidak ada lagi pemisahan web route vs API route untuk fitur utama
-- flow auth, admin users, summary, dan pomodoro mengikuti session web biasa
+## Struktur Route
 
-### 2. Helper JSON kustom dihapus
+### Web
 
-Status:
-- `app/Helpers/Helper.php` sudah dihapus
-- autoload `files` untuk helper lama sudah dibersihkan
-- controller dan middleware tidak lagi memakai helper JSON lama
+Dipakai untuk render halaman:
 
-Pola yang dipakai sekarang:
-- `return view(...)`
-- `return redirect(...)->with(...)`
-- `return back()->withErrors(...)`
-- `abort(...)`
+- `/`
+- `/belajar`
+- `/pomodoro`
+- `/utama`
+- `/profile`
+- `/admin`
+- `/admin/users`
+- `/admin/pomodoro`
 
-### 3. Controller utama sudah mengikuti flow web
+### API
 
-#### `AuthController`
+Dipakai untuk data dan aksi via fetch:
 
-Status:
-- register login otomatis lalu redirect ke `utama`
-- login redirect ke dashboard admin atau `utama`
-- logout invalidate session lalu redirect ke `/`
-- `/me` sekarang render view profil, bukan JSON
+- `/api/v1/auth/register`
+- `/api/v1/auth/login`
+- `/api/v1/auth/logout`
+- `/api/v1/me`
+- `PATCH /api/v1/me`
+- `/api/v1/summary`
+- `/api/v1/pomodoro/history`
+- `/api/v1/admin/dashboard`
+- `/api/v1/admin/pomodoro`
+- `/api/v1/admin/users`
 
-#### `AdminController`
+## Standar Response JSON
 
-Status:
-- admin users full Blade + form
-- create update delete user lewat route web biasa
-- error create dan edit membuka modal yang sesuai lewat flash session
+### Success
 
-#### `SummaryController`
+```json
+{
+  "success": true,
+  "message": "OK",
+  "data": {},
+  "meta": {}
+}
+```
 
-Status:
-- upload dokumen validasi lewat Laravel
-- hasil sukses disimpan ke session dan dirender di halaman test summary
-- jika `AI_BACKEND_URL` kosong, controller tetap mengembalikan payload sukses untuk uji integrasi dasar
+### Error
 
-#### `UserController`
+```json
+{
+  "success": false,
+  "message": "Terjadi error.",
+  "errors": {},
+  "meta": {}
+}
+```
 
-Status:
-- logic edit profile masih disimpan di controller
-- route publiknya belum dipasang lagi sambil menunggu kesepakatan frontend
-- kalau nanti dipakai lagi, return saat ini sudah netral dengan pola `back()` + flash
+Catatan:
 
-#### `PomodoroController`
+- `data` adalah payload bisnis utama
+- `meta` untuk konteks tambahan seperti `redirect_to` atau `fallback`
+- validasi field masuk ke `errors`
 
-Status:
-- logic post/get sesi pomodoro masih disimpan di controller
-- route test-nya sudah dihapus
-- method disimpan dulu untuk integrasi frontend berikutnya
+## Middleware dan Auth
 
-### 4. Middleware admin disederhanakan
+- API tetap mengandalkan session browser
+- `statefulApi()` aktif di bootstrap
+- `admin.validate` mengembalikan JSON `401/403` kalau request mengharapkan JSON
+- logout tetap invalidate session dan regenerate CSRF token
 
-Status:
-- middleware `admin.validate` menjaga akses admin
-- user non-admin menerima `403`
-- user yang belum login ditangani oleh middleware auth/web flow
+## Pedoman Kalau Menambah Fitur Backend
 
-## Pola Pengembangan Backend Yang Harus Dipertahankan
+1. Tentukan dulu fiturnya termasuk web page atau JSON API.
+2. Kalau render halaman, tambahkan route di `web.php`.
+3. Kalau dipakai fetch frontend, tambahkan route di `api.php` dengan prefix `/api/v1`.
+4. Untuk endpoint JSON, selalu pakai helper response standar dari base `Controller`.
+5. Jangan bikin bentuk payload bebas per-controller.
+6. Jangan tambahkan auth token frontend kalau session masih cukup.
 
-Kalau menambah fitur baru, ikuti pola ini:
+## Catatan Implementasi Penting
 
-1. Tambah route di `routes/web.php`
-2. Lindungi dengan middleware `auth` atau `admin.validate` bila perlu
-3. Render halaman lewat Blade atau redirect
-4. Gunakan flash session untuk status sukses
-5. Gunakan validasi Laravel untuk error input
-6. Hindari menambah helper response kustom
-7. Jangan tambahkan route API baru kecuali memang ada kebutuhan terpisah yang jelas
+- Model auth utama sekarang `App\Models\Auth`
+- tabel auth utama sekarang `auths`
+- relasi user profile memakai `users.auth_id`
+- password sekarang di-hash dengan `Hash::make`, bukan binary Go lama
+- username unik dibuat dari helper PHP `generateUniqueUsername()`
+- summary memakai Gemini API langsung lewat `GEMINI_API_KEY`
 
-## Catatan Operasional
+## Operasional
 
-### Runtime PHP harus konsisten
+### Environment penting
 
-Hasil verifikasi lokal menunjukkan:
-- aplikasi berjalan baik lewat `php artisan serve`
-- server web terpisah bisa gagal kalau versi PHP berbeda dengan CLI
+- `DB_*`
+- `SESSION_DRIVER=redis`
+- `CACHE_STORE=redis`
+- `REDIS_*`
+- `APP_URL`
+- `GEMINI_API_KEY`
 
-Praktik yang wajib:
-- samakan versi PHP CLI dan web server
-- arahkan docroot web server ke folder `public/`
-- setelah ubah route atau Blade, refresh cache dengan:
+### Cek route
+
+```bash
+php artisan route:list
+php artisan route:list --path=api/v1
+```
+
+### Cache refresh
 
 ```bash
 php artisan optimize:clear
@@ -115,45 +139,19 @@ php artisan route:cache
 php artisan view:cache
 ```
 
-### Binary Go masih dipakai
+## Verifikasi Terakhir
 
-Backend saat ini masih bergantung pada binary lokal untuk:
-- hashing password
-- pembuatan suffix username unik
+Yang sudah diverifikasi:
 
-Implikasi:
-- file binary harus ada dan executable di environment target
-- error binary akan muncul sebagai flash error atau log aplikasi
+- route `/api/v1` terdaftar lengkap
+- syntax check PHP untuk controller, bootstrap, dan route file lolos
 
-## Verifikasi Manual Terakhir
+Yang belum bisa diverifikasi penuh di environment ini:
 
-Pengujian browser terakhir yang sudah lolos:
+- feature test API gagal dijalankan karena driver `pdo_sqlite` belum tersedia
 
-- login admin
-- admin dashboard
-- admin users
-- admin pomodoro
-- halaman `/me`
-- halaman `/belajar`
-- halaman `/pomodoro`
-- halaman `/utama`
-- submit `POST /summary`
+## Risiko Yang Masih Perlu Dijaga
 
-Skenario yang sudah diuji:
-- create user admin
-- edit user admin
-- delete user admin
-- upload summary
-
-## Risiko Yang Masih Tersisa
-
-- belum ada feature test otomatis untuk flow web utama
-- `laravel/sanctum` masih ada di dependency walau route Sanctum sudah dimatikan
-- beberapa halaman frontend masih bergantung pada struktur statis lama, jadi setiap perubahan navigasi perlu smoke test browser
-
-## Langkah Lanjut Yang Disarankan
-
-1. Tambah feature test untuk auth, admin users, summary, dan pomodoro
-2. Evaluasi apakah dependency `laravel/sanctum` masih perlu dipertahankan
-3. Pasang route final untuk edit profile dan pomodoro setelah kontrak frontend jelas
-4. Lanjutkan smoke test browser setiap ada perubahan navigasi atau asset JS
+- dokumentasi lain di luar folder docs bisa saja masih menyebut flow lama
+- test otomatis belum hijau karena environment test DB belum siap
+- frontend dan backend harus tetap disiplin memakai `/api/v1`, jangan kembali ke `/api/...` lama

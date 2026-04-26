@@ -1,25 +1,85 @@
 # Dokumentasi Endpoint Neuroom
 
-Dokumen ini merangkum route aktif aplikasi setelah semua alur dipusatkan ke `routes/web.php`.
+Dokumen ini merangkum route aktif Neuroom per April 2026. Kondisi terbaru aplikasi memakai dua jalur:
+
+- `routes/web.php` untuk halaman Blade
+- `routes/api.php` untuk JSON API di prefix `/api/v1`
 
 ## Ringkasan
 
-- Tidak ada `routes/api.php`
-- Semua endpoint aplikasi ada di `routes/web.php`
-- Autentikasi memakai session guard `web`
-- Tidak ada bearer token dan tidak ada helper response JSON kustom
-- Halaman admin users, summary, profile, dan pomodoro berjalan dengan flow Laravel web biasa
+- Autentikasi tetap memakai session guard `web`
+- Frontend AJAX/fetch memakai cookie session browser, bukan bearer token
+- Semua response API JSON sekarang mengikuti kontrak standar:
+  - `success`
+  - `message`
+  - `data`
+  - `errors`
+  - `meta`
+- Route API aktif ada di `/api/v1/...`
 
-## Route Publik
+## Route Web
 
-### `GET /`
+### Publik
+
+#### `GET /`
 
 - Menampilkan landing page
 
-### `POST /auth/register`
+### Private `auth`
+
+#### `GET /me`
+
+- redirect ke `GET /profile`
+
+#### `GET /fokus`
+
+- redirect ke `GET /pomodoro`
+
+#### `GET /catatan`
+
+- menampilkan halaman `catatan`
+
+#### `GET /belajar`
+
+- menampilkan halaman belajar
+
+#### `GET /pomodoro`
+
+- menampilkan halaman pomodoro
+
+#### `GET /utama`
+
+- menampilkan halaman utama
+
+#### `GET /profile`
+
+- menampilkan halaman profil
+
+### Private Admin `auth + admin.validate`
+
+#### `GET /admin`
+
+- menampilkan dashboard admin
+
+#### `GET /admin/users`
+
+- menampilkan halaman users admin
+
+#### `GET /admin/pomodoro`
+
+- menampilkan halaman pomodoro admin
+
+#### `GET /dashboard`
+
+- redirect ke `GET /admin`
+
+## Route API `/api/v1`
+
+### Auth
+
+#### `POST /api/v1/auth/register`
 
 Middleware:
-- `guest`
 - `throttle:5,1`
 
 Field:
@@ -27,18 +87,18 @@ Field:
 | Field | Tipe | Wajib | Rule |
 |---|---|---|---|
 | `username` | string | Ya | `required|string|max:100` |
-| `email` | string | Ya | `required|string|email|max:100|unique:authentications,email` |
-| `password` | string | Ya | `required|string|min:8` |
+| `email` | string | Ya | `required|string|email|max:100|unique:auths,email` |
+| `password` | string | Ya | `required|string|min:8` plus rules `Password::min(8)->letters()->mixedCase()->numbers()` |
 
-Hasil:
-- sukses: login otomatis lalu redirect ke `GET /utama`
-- gagal: redirect back dengan error validasi atau error login/register
+Success:
+- status `201`
+- login otomatis
+- `meta.redirect_to` ke `GET /utama`
 
-### `POST /auth/login`
+#### `POST /api/v1/auth/login`
 
 Middleware:
-- `guest`
-- `throttle:10,1`
+- `throttle:5,1`
 
 Field:
 
@@ -47,194 +107,197 @@ Field:
 | `email` | string | Ya | `required|string|email|max:100` |
 | `password` | string | Ya | `required|string` |
 
-Hasil:
-- sukses user biasa: redirect ke `GET /utama`
-- sukses admin: redirect ke `GET /admin`
-- gagal: redirect back dengan flash error
+Success:
+- status `200`
+- `meta.redirect_to` ke `GET /utama` atau `GET /admin`
 
-## Route Private
+#### `POST /api/v1/auth/logout`
 
-Semua route di bawah ini memakai middleware `auth`.
+Middleware:
+- `auth:sanctum`
 
-### `POST /auth/logout`
-
-Hasil:
+Success:
+- status `200`
 - logout session
 - invalidate session
 - regenerate CSRF token
-- redirect ke `/`
+- `meta.redirect_to` ke `/`
 
-### `GET /me`
+#### `GET /api/v1/me`
 
-Hasil:
-- menampilkan halaman profil user di Blade
+Middleware:
+- `auth:sanctum`
 
-### `POST /summary`
+Success:
+- status `200`
+- data profil user aktif
+
+### Profile
+
+#### `PATCH /api/v1/me`
+
+Middleware:
+- `auth:sanctum`
+
+Field:
+
+| Field | Tipe | Wajib | Rule |
+|---|---|---|---|
+| `display_name` | string | Tidak | `nullable|string|max:100` |
+| `email` | string | Tidak | `nullable|string|email|max:100` |
+| `profile_picture` | file image | Tidak | `nullable|image|mimes:jpeg,png,jpg|max:10000` |
+
+Success:
+- status `200`
+- data user terbaru di `data.user`
+
+### Summary
+
+#### `POST /api/v1/summary`
+
+Middleware:
+- `auth:sanctum`
 
 Field:
 
 | Field | Tipe | Wajib | Rule |
 |---|---|---|---|
 | `document` | file | Ya | `required|file|mimes:pdf,ppt,pptx,doc,docx,xls,xlsx,txt,csv,rtf,odt,ods,odp|max:20480` |
-| `bahasa` | string | Ya | `required|string` |
+| `bahasa` | string | Ya | `required|string|in:indonesia,english` |
 
-Nilai `bahasa` yang dipakai:
-- `indonesia`
-- `english`
+Success:
+- status `200`
+- hasil ringkasan di `data.summary`
 
-Hasil:
-- sukses: redirect back dengan session `success` dan `summary_result`
-- gagal validasi: redirect back dengan error Laravel
-- gagal akses backend AI: redirect back dengan error
+Fallback:
+- kalau `GEMINI_API_KEY` kosong, API tetap `200`
+- `data.summary.status = fallback`
+- `meta.fallback = true`
 
-Catatan:
-- kalau `AI_BACKEND_URL` kosong, controller tetap redirect back sukses dengan payload session generik
+### Pomodoro
 
-### `GET /fokus`
+#### `GET /api/v1/pomodoro/history`
 
-Hasil:
-- redirect ke `GET /pomodoro`
+Middleware:
+- `auth:sanctum`
 
-### `GET /catatan`
+Success:
+- status `200`
+- 20 sesi terakhir user aktif di `data.sessions`
 
-Hasil:
-- redirect ke `GET /utama`
+#### `POST /api/v1/pomodoro/history`
 
-### `GET /belajar`
+Middleware:
+- `auth:sanctum`
 
-Hasil:
-- menampilkan halaman pilihan belajar
+Field:
 
-### `GET /pomodoro`
+| Field | Tipe | Wajib | Rule |
+|---|---|---|---|
+| `duration_seconds` | integer | Ya | `required|integer|min:1` |
 
-Hasil:
-- menampilkan halaman timer pomodoro
-- frontend memanggil backend web route test pomodoro yang aktif untuk kebutuhan tracking
+Success:
+- status `201`
+- sesi baru di `data.session`
 
-### `GET /utama`
+### Admin
 
-Nama route:
-- `utama`
-
-Hasil:
-- menampilkan dashboard utama
-
-## Method Backend Yang Belum Dipublish Ke Frontend
-
-Method ini masih ada di controller, tetapi route publiknya belum dipasang lagi:
-
-- `UserController::edit_profile()`
-- `PomodoroController::post_to_pomodoro_history()`
-- `PomodoroController::get_to_pomodoro_history()`
-
-Alasan:
-- kontrak request/response dengan frontend belum final
-- backend sengaja disimpan dulu agar logic tidak hilang
-- saat nanti dipasang lagi, flow yang disarankan tetap `back()` + flash/session atau pola lain yang disepakati
-
-## Route Admin
-
-Semua route admin memakai middleware:
-- `auth`
+Semua route admin API memakai middleware:
+- `auth:sanctum`
 - `admin.validate`
 
-### `GET /admin`
+#### `GET /api/v1/admin/dashboard`
 
-Nama route:
-- `admin.dashboard`
+Success:
+- status `200`
+- statistik di `data.stats`
+- sesi terbaru di `data.latest_sessions`
 
-Hasil:
-- menampilkan dashboard admin
+#### `GET /api/v1/admin/pomodoro`
 
-### `GET /admin/pomodoro`
+Success:
+- status `200`
+- daftar sesi pomodoro di `data.sessions`
 
-Nama route:
-- `admin.pomodoro`
+#### `GET /api/v1/admin/users`
 
-Hasil:
-- menampilkan halaman pomodoro admin
+Success:
+- status `200`
+- daftar user di `data.users`
 
-### `GET /admin/users`
-
-Nama route:
-- `admin.users`
-
-Hasil:
-- menampilkan tabel user yang dirender langsung oleh Blade
-
-### `POST /admin/users`
-
-Nama route:
-- `admin.users.store`
+#### `POST /api/v1/admin/users`
 
 Field:
 
 | Field | Tipe | Wajib | Rule |
 |---|---|---|---|
 | `username` | string | Ya | `required|string|max:100` |
-| `email` | string | Ya | `required|string|email|max:100|unique:authentications,email` |
+| `email` | string | Ya | `required|string|email|max:100|unique:auths,email` |
 | `password` | string | Ya | `required|string|min:8` |
 
-Hasil:
-- sukses: redirect ke `GET /admin/users` dengan flash `success`
-- gagal: redirect ke `GET /admin/users`, buka modal create, dan tampilkan error
+Success:
+- status `201`
+- user baru di `data.user`
 
-### `PUT /admin/users/{user}`
-
-Nama route:
-- `admin.users.update`
+#### `PUT /api/v1/admin/users/{user}`
 
 Field:
 
 | Field | Tipe | Wajib | Rule |
 |---|---|---|---|
-| `displayName` | string | Ya | `required|string|max:100` |
-| `email` | string | Ya | `required|string|email|max:100|unique:authentications,email,{id}` |
-| `isAdmin` | integer | Ya | `required|integer|in:0,1` |
+| `display_name` atau `displayName` | string | Ya | `required|string|max:100` |
+| `email` | string | Ya | `required|string|email|max:100|unique:auths,email,{id}` |
+| `is_admin` atau `isAdmin` | integer | Ya | `required|integer|in:0,1` |
 | `password` | string | Tidak | `nullable|string|min:8` |
 
-Hasil:
-- sukses: redirect ke `GET /admin/users` dengan flash `success`
-- gagal: redirect ke `GET /admin/users`, buka modal edit, dan tampilkan error
+Success:
+- status `200`
+- user terbaru di `data.user`
 
-### `DELETE /admin/users/{user}`
+#### `DELETE /api/v1/admin/users/{user}`
 
-Nama route:
-- `admin.users.delete`
+Success:
+- status `200`
+- tidak ada payload bisnis, hanya message sukses
 
-Hasil:
-- hapus user auth target
-- redirect ke `GET /admin/users` dengan flash `success`
+## Pola Response API
 
-### `GET /dashboard`
+Semua endpoint JSON mengikuti bentuk ini:
 
-Nama route:
-- `dashboard`
+### Success
 
-Hasil:
-- redirect ke `GET /admin`
+```json
+{
+  "success": true,
+  "message": "Login berhasil.",
+  "data": {
+    "user": {}
+  },
+  "meta": {
+    "redirect_to": "/utama"
+  }
+}
+```
 
-## Pola Response
+### Error
 
-Pola response yang dipakai sekarang:
-
-- halaman: `return view(...)`
-- sukses submit form: `redirect(...)->with('success', '...')`
-- validasi gagal: `$request->validate(...)` atau `withErrors(...)`
-- akses ditolak: `abort(403)` atau redirect ke halaman lain
-
-Tidak dipakai lagi:
-
-- `routes/api.php`
-- bearer token auth
-- `success_format(...)`
-- `error_format(...)`
-- response JSON helper kustom
+```json
+{
+  "success": false,
+  "message": "Validasi gagal.",
+  "errors": {
+    "email": ["Email sudah digunakan."]
+  },
+  "meta": {}
+}
+```
 
 ## Error Umum
 
-- `302` ke halaman sebelumnya: submit form web biasa
-- `401/403`: belum login atau bukan admin
-- `422`: validasi gagal
-- `429`: throttle pada login/register
-- `500`: proses internal gagal, misalnya binary Go, DB, atau backend AI bermasalah
+- `401`: belum login
+- `403`: bukan admin
+- `409`: session aktif sudah ada
+- `422`: validasi gagal atau kredensial salah
+- `429`: throttle auth
+- `500`: proses internal gagal
+- `502`: layanan AI gagal atau respons AI tidak valid
