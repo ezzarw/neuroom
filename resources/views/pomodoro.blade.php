@@ -8,7 +8,6 @@
 
   <link rel="stylesheet" href="{{ asset('css/style.css') }}">
   <link rel="stylesheet" href="{{ asset('css/pomodoro.css') }}">
-  <script src="{{ asset('js/vendor/axios.min.js') }}"></script>
 </head>
 
 <body>
@@ -59,28 +58,18 @@
     </div>
 
     <div class="history" id="trackingList">
-
       {{-- =========================
-         BACKEND RENDER DATA
+         BACKEND / FRONTEND RENDER DATA
          ========================= --}}
-      {{-- contoh blade --}}
-      @foreach($histories ?? [] as $item)
-        <div class="history-item">
-          <strong>{{ $item->duration }}</strong><br>
-          <span>{{ $item->created_at }}</span>
-        </div>
-      @endforeach
-
-      {{-- kalau kosong --}}
-      @if(empty($histories))
-        <p class="empty">Belum ada sesi fokus</p>
-      @endif
-
+      {{-- default state awal --}}
+      <p class="empty">Belum ada sesi fokus</p>
     </div>
   </div>
 
 </div>
 
+<!-- SCRIPT -->
+<script src="{{ asset('js/stateful-api.js') }}" defer></script>
 <script src="{{ asset('js/pomodoro.js') }}" defer></script>
 
 </body>

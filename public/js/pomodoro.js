@@ -12,10 +12,6 @@ const finishBtn = document.getElementById("finishBtn");
 const refreshBtn = document.getElementById("refreshBtn");
 const trackingList = document.getElementById("trackingList");
 
-// ===== AXIOS (Laravel CSRF) =====
-axios.defaults.headers.common['X-CSRF-TOKEN'] =
-  document.querySelector('meta[name="csrf-token"]').getAttribute('content');
-
 // ===== STATE =====
 let state = {
   running: false,
@@ -71,24 +67,22 @@ function reset() {
 // ===== BACKEND =====
 
 // 🔸 BACKEND WAJIB:
-// POST /pomodoro/store
+// POST /api/pomodoro/history
 async function saveSession(duration) {
-  try {
-    await axios.post("/pomodoro/store", {
-      duration: duration
-    });
-  } catch (err) {
-    console.error("Gagal simpan:", err);
-  }
+  return window.NeuroomApi.request("/api/v1/pomodoro/history", {
+    method: "POST",
+    data: {
+      duration_seconds: duration,
+    },
+  });
 }
 
 // 🔸 BACKEND WAJIB:
-// GET /pomodoro/history
+// GET /api/pomodoro/history
 async function loadHistory() {
   try {
-    const res = await axios.get("/pomodoro/history");
-
-    renderHistory(res.data);
+    const res = await window.NeuroomApi.request("/api/v1/pomodoro/history");
+    renderHistory(res.data?.sessions || []);
   } catch (err) {
     console.error("Gagal ambil history:", err);
   }
@@ -109,7 +103,7 @@ function renderHistory(list) {
 
     div.innerHTML = `
       <strong>${item.duration}</strong><br>
-      <span>${item.created_at}</span>
+      <span>${window.NeuroomApi.formatDate(item.created_at)}</span>
     `;
 
     trackingList.appendChild(div);
@@ -118,7 +112,11 @@ function renderHistory(list) {
 
 // ===== FINISH (SIMPAN KE BACKEND) =====
 async function finish() {
-  const duration = formatTime(getCurrentTime());
+  const duration = Math.floor(getCurrentTime() / 1000);
+
+  if (duration <= 0) {
+    return;
+  }
 
   await saveSession(duration);
 

@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>Pilih Pelajaran</title>
 
     <link rel="stylesheet" href="{{ asset('css/belajar.css') }}">
@@ -34,24 +35,17 @@
             Upload file dan dapatkan ringkasan otomatis
         </p>
 
-        @if ($errors->any())
-            <div class="summary-alert error">
-                {{ $errors->first() }}
-            </div>
-        @endif
+        <div class="summary-alert error" id="summary-error" style="display:none;"></div>
 
-        <form method="POST" action="/summary" enctype="multipart/form-data" class="summary-form" id="summaryForm">
-            @csrf
-
+        <form method="POST" enctype="multipart/form-data" class="summary-form" id="summaryForm">
             <!-- DRAG AREA -->
             <label class="drop-area" id="dropArea">
                 <input type="file" name="document" id="fileInput" hidden required>
-
                 <p id="fileText">Klik atau drag file ke sini</p>
             </label>
 
             <div class="summary-row">
-                <select name="bahasa">
+                <select name="bahasa" id="bahasaInput">
                     <option value="indonesia">Indonesia</option>
                     <option value="english">English</option>
                 </select>
@@ -66,28 +60,11 @@
         </div>
 
         <!-- HASIL -->
-        @if(session('summary_result'))
-            <div class="summary-result">
-                <p><strong>Status:</strong> {{ session('summary_result.status') }}</p>
-                <p>{{ session('summary_result.message') }}</p>
-
-                <div class="summary-output">
-    @php
-        $output = session('summary_result.output');
-    @endphp
-
-    @if(is_array($output))
-        <ul>
-            @foreach($output as $item)
-                <li>{{ $item }}</li>
-            @endforeach
-        </ul>
-    @else
-        {{ $output }}
-    @endif
-</div>
-            </div>
-        @endif
+        <div class="summary-result" id="summary-result" style="display:none;">
+            <p><strong>Status:</strong> <span id="summary-status">-</span></p>
+            <p id="summary-message">-</p>
+            <div class="summary-output" id="summary-output"></div>
+        </div>
 
     </div>
     <h1 class="headline">Pilih Quiz sesuai kebutuhanmu</h1>
@@ -111,45 +88,8 @@
 </section>
 
 <!-- SCRIPT -->
-<script>
-const dropArea = document.getElementById('dropArea');
-const fileInput = document.getElementById('fileInput');
-const fileText = document.getElementById('fileText');
-const form = document.getElementById('summaryForm');
-const loadingBox = document.getElementById('loadingBox');
-
-// klik buka file
-dropArea.addEventListener('click', () => fileInput.click());
-
-// drag effect
-dropArea.addEventListener('dragover', (e) => {
-    e.preventDefault();
-    dropArea.classList.add('dragover');
-});
-
-dropArea.addEventListener('dragleave', () => {
-    dropArea.classList.remove('dragover');
-});
-
-// drop file
-dropArea.addEventListener('drop', (e) => {
-    e.preventDefault();
-    dropArea.classList.remove('dragover');
-
-    fileInput.files = e.dataTransfer.files;
-    fileText.innerText = e.dataTransfer.files[0].name;
-});
-
-// change file
-fileInput.addEventListener('change', () => {
-    fileText.innerText = fileInput.files[0].name;
-});
-
-// loading state
-form.addEventListener('submit', () => {
-    loadingBox.style.display = 'block';
-});
-</script>
+<script src="{{ asset('js/stateful-api.js') }}" defer></script>
+<script src="{{ asset('js/belajar-summary.js') }}" defer></script>
 
 </body>
 </html>

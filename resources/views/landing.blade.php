@@ -4,6 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>Neuroom — Learning Platform</title>
 
     <!-- CSS -->
@@ -11,17 +12,7 @@
 </head>
 
 <body>
-    @if (session('success'))
-        <div style="max-width: 1100px; margin: 16px auto 0; padding: 12px 16px; border-radius: 12px; background: #dcfce7; color: #166534; font-weight: 600;">
-            {{ session('success') }}
-        </div>
-    @endif
-
-    @if ($errors->any() && ! session('auth_popup'))
-        <div style="max-width: 1100px; margin: 16px auto 0; padding: 12px 16px; border-radius: 12px; background: #fee2e2; color: #991b1b; font-weight: 600;">
-            {{ $errors->first() }}
-        </div>
-    @endif
+    <div id="page-feedback" style="display:none; max-width: 1100px; margin: 16px auto 0; padding: 12px 16px; border-radius: 12px; font-weight: 600;"></div>
 
     <!-- NAVBAR -->
     <nav class="navbar">
@@ -55,7 +46,6 @@
             <video class="hero-video" autoplay muted loop playsinline>
                 <source src="{{ asset('video/video-ukl.mp4') }}" type="video/mp4">
             </video>
-        </div>
         </div>
     </section>
 
@@ -159,18 +149,12 @@
 
             <h2>Masuk</h2>
             <p class="popup-desc">Masuk untuk mulai belajar lebih fokus</p>
+            <div id="login-feedback" style="display:none; margin-bottom: 12px; padding: 10px 12px; border-radius: 10px; background: #fee2e2; color: #991b1b; font-size: 14px;"></div>
 
-            @if ($errors->has('login'))
-                <div style="margin-bottom: 12px; padding: 10px 12px; border-radius: 10px; background: #fee2e2; color: #991b1b; font-size: 14px;">
-                    {{ $errors->first('login') }}
-                </div>
-            @endif
-
-            <form method="POST" action="/auth/login">
-                @csrf
-                <input type="email" placeholder="Email" name="email" value="{{ old('email') }}" required>
+            <form method="POST" id="login-form">
+                <input type="email" placeholder="Email" name="email" required>
                 <input type="password" placeholder="Password" name="password" required>
-                <button type="submit" class="btn-primary full">Login</button>
+                <button type="submit" class="btn-primary full" id="login-submit">Login</button>
             </form>
 
             <p class="popup-footer">
@@ -187,19 +171,13 @@
 
             <h2>Daftar</h2>
             <p class="popup-desc">Buat akun untuk mulai belajar</p>
+            <div id="register-feedback" style="display:none; margin-bottom: 12px; padding: 10px 12px; border-radius: 10px; background: #fee2e2; color: #991b1b; font-size: 14px;"></div>
 
-            @if ($errors->has('register') || $errors->has('username') || $errors->has('email') || $errors->has('password'))
-                <div style="margin-bottom: 12px; padding: 10px 12px; border-radius: 10px; background: #fee2e2; color: #991b1b; font-size: 14px;">
-                    {{ $errors->first('register') ?: $errors->first('username') ?: $errors->first('email') ?: $errors->first('password') }}
-                </div>
-            @endif
-
-            <form method="POST" action="/auth/register">
-                @csrf
-                <input type="text" placeholder="Nama Lengkap" name="username" value="{{ old('username') }}" required>
-                <input type="email" placeholder="Email" name="email" value="{{ old('email') }}" required>
+            <form method="POST" id="register-form">
+                <input type="text" placeholder="Nama Lengkap" name="username" required>
+                <input type="email" placeholder="Email" name="email" required>
                 <input type="password" placeholder="Password" name="password" required>
-                <button type="submit" class="btn-primary full">Daftar</button>
+                <button type="submit" class="btn-primary full" id="register-submit">Daftar</button>
             </form>
 
             <p class="popup-footer">
@@ -208,13 +186,10 @@
             </p>
         </div>
     </div>
-    @if (session('auth_popup'))
-        <script>
-            window.location.hash = '#{{ session('auth_popup') }}';
-        </script>
-    @endif
 
-
+    <!-- SCRIPT -->
+    <script src="{{ asset('js/stateful-api.js') }}" defer></script>
+    <script src="{{ asset('js/landing-auth.js') }}" defer></script>
 </body>
 
 </html>

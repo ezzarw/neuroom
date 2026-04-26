@@ -46,7 +46,6 @@
 @endphp
 
 <div class="layout">
-
     <!-- SIDEBAR -->
     <aside class="sidebar">
         <h2 class="logo">Neuroom Admin</h2>
@@ -71,7 +70,6 @@
 
     <!-- MAIN -->
     <main class="main">
-
         <!-- HEADER -->
         <div class="header">
             <h1>Welcome Dashboard!</h1>
@@ -79,10 +77,7 @@
                 <span class="admin-name">
                     Login sebagai: <strong>{{ $adminName }}</strong>
                 </span>
-                <form action="{{ url('/auth/logout') }}" method="POST">
-                    @csrf
-                    <button type="submit" class="logout-btn">Logout</button>
-                </form>
+                <button type="button" class="logout-btn" id="logout-button">Logout</button>
             </div>
         </div>
 
@@ -90,17 +85,17 @@
         <section class="stats">
             <div class="card">
                 <h4>Total Users</h4>
-                <h2>{{ $totalUsers ?? 1284 }}</h2>
+                <h2 id="total-users">-</h2>
             </div>
 
             <div class="card">
                 <h4>Total Sessions</h4>
-                <h2>{{ $totalSessions ?? 324 }}</h2>
+                <h2 id="total-sessions">-</h2>
             </div>
 
             <div class="card">
                 <h4>Active Today</h4>
-                <h2>{{ $activeToday ?? 98 }}</h2>
+                <h2 id="active-today">-</h2>
             </div>
         </section>
 
@@ -113,33 +108,25 @@
                     <tr>
                         <th>ID</th>
                         <th>User</th>
-                        <th>Mode</th>
-                        <th>Duration</th>
-                        <th>Status</th>
+                        <th>Sesi</th>
+                        <th>Durasi</th>
+                        <th>Tanggal</th>
                     </tr>
                 </thead>
-                <tbody>
-
-                    @forelse($sessions ?? [] as $session)
-                        <tr>
-                            <td>#{{ $session->id }}</td>
-                            <td>{{ $session->user->name ?? '-' }}</td>
-                            <td>{{ $session->mode }}</td>
-                            <td>{{ $session->duration }}</td>
-                            <td>{{ $session->status }}</td>
-                        </tr>
-                    @empty
-                        <tr>
-                            <td colspan="5">Belum ada data.</td>
-                        </tr>
-                    @endforelse
-
+                <tbody id="latest-sessions-body">
+                    <tr>
+                        <td colspan="5">Memuat data...</td>
+                    </tr>
                 </tbody>
             </table>
         </section>
 
     </main>
 </div>
+
+<!-- SCRIPT -->
+<script src="{{ asset('js/stateful-api.js') }}" defer></script>
+<script src="{{ asset('js/admin-dashboard.js') }}" defer></script>
 
 </body>
 </html>
