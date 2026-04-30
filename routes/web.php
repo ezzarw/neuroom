@@ -3,52 +3,58 @@
 use App\Http\Controllers\AdminController;
 use Illuminate\Support\Facades\Route;
 
+/*
+|--------------------------------------------------------------------------
+| PUBLIC ROUTES
+|--------------------------------------------------------------------------
+*/
+
 Route::get('/', function () {
     return view('landing');
 })->name('landing');
 
+
+/*
+|--------------------------------------------------------------------------
+| AUTH ROUTES (WAJIB LOGIN)
+|--------------------------------------------------------------------------
+*/
+
 Route::middleware('auth')->group(function () {
-    Route::get('/me', function () {
-        return redirect()->route('profile');
-    })->name('me');
 
-    Route::get('/fokus', function () {
-        return redirect()->route('pomodoro');
-    })->name('fokus');
+    // Redirect helper
+    Route::get('/me', fn() => redirect()->route('profile'))->name('me');
+    Route::get('/fokus', fn() => redirect()->route('pomodoro'))->name('fokus');
 
-    Route::get('/catatan', function () {
-        return view('catatan');
-    })->name('catatan');
+    // Halaman utama user
+    Route::view('/belajar', 'belajar')->name('belajar');
+    Route::view('/catatan', 'catatan')->name('catatan');
+    Route::view('/pomodoro', 'pomodoro')->name('pomodoro');
+    Route::view('/utama', 'utama')->name('utama');
+    Route::view('/profile', 'profile')->name('profile');
 
-    Route::get('/belajar', function () {
-        return view('belajar');
-    })->name('belajar');
-
-    Route::get('/pomodoro', function () {
-        return view('pomodoro');
-    })->name('pomodoro');
-
-    Route::get('/utama', function () {
-        return view('utama');
-    })->name('utama');
-
-    Route::get('/profile', function () {
-        return view('profile');
-    })->name('profile');
+    // QUIZ 
+    Route::view('/quiz-umum', 'quiz-umum')->name('quiz.umum');
+    Route::view('/quiz-kejuruan', 'quiz-kejuruan')->name('quiz.kejuruan');
+    Route::view('/kerjakan-quiz', 'kerjakan-quiz')->name('quiz.play');
 });
 
+
+/*
+|--------------------------------------------------------------------------
+| ADMIN ROUTES
+|--------------------------------------------------------------------------
+*/
+
 Route::middleware(['auth', 'admin.validate'])->group(function () {
-    Route::get('/admin', function () {
-        return view('admin.dashboard');
-    })->name('admin.dashboard');
 
-    Route::get('/admin/users', [AdminController::class, 'usersPage'])->name('admin.users');
+    Route::view('/admin', 'admin.dashboard')->name('admin.dashboard');
 
-    Route::get('/admin/pomodoro', function () {
-        return view('admin.pomodoro');
-    })->name('admin.pomodoro');
+    Route::get('/admin/users', [AdminController::class, 'usersPage'])
+        ->name('admin.users');
 
-    Route::get('/dashboard', function () {
-        return redirect()->route('admin.dashboard');
-    })->name('dashboard');
+    Route::view('/admin/pomodoro', 'admin.pomodoro')->name('admin.pomodoro');
+
+    Route::get('/dashboard', fn() => redirect()->route('admin.dashboard'))
+        ->name('dashboard');
 });

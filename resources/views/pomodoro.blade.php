@@ -13,18 +13,7 @@
 <body>
 
 <!-- NAVBAR -->
-<nav class="navbar">
-  <div class="container nav-content">
-    <div class="logo">Neuroom</div>
-
-        <ul class="nav-menu">
-      <li><a href="/utama">Beranda</a></li>
-      <li><a href="/belajar">Belajar</a></li>
-      <li><a href="/pomodoro">Fokus</a></li>
-      <li><a href="/catatan">Catatan</a></li>
-    </ul>
-  </div>
-</nav>
+<x-navbar />
 
 <div class="pomodoro">
 

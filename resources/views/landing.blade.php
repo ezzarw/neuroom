@@ -15,20 +15,23 @@
     <div id="page-feedback" style="display:none; max-width: 1100px; margin: 16px auto 0; padding: 12px 16px; border-radius: 12px; font-weight: 600;"></div>
 
     <!-- NAVBAR -->
-    <nav class="navbar">
-        <div class="container nav-content">
-            <div class="logo">Neuroom</div>
+    <!-- NAVBAR -->
+<nav class="navbar navbar-landing">
+  <div class="container nav-content">
 
-            <ul class="nav-menu">
-                <li><a href="/">Beranda</a></li>
-                <li><a href="/belajar">Belajar</a></li>
-                <li><a href="/fokus">Fokus</a></li>
-                <li><a href="/catatan">Catatan</a></li>
-            </ul>
+    <div class="logo">Neuroom</div>
 
-            <a href="#login-popup" class="btn-primary">Mulai Belajar</a>
-        </div>
-    </nav>
+    <ul class="nav-menu">
+      <li><a href="/">Beranda</a></li>
+      <li><a href="#login-popup" data-target="/belajar">Belajar</a></li>
+      <li><a href="#login-popup" data-target="/fokus">Fokus</a></li>
+      <li><a href="#login-popup" data-target="/catatan">Catatan</a></li>
+    </ul>
+
+    <a href="#login-popup" class="btn-primary">Mulai Belajar</a>
+
+  </div>
+</nav>
 
     <!-- HERO -->
     <section class="hero">

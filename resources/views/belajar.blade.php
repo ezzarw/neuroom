@@ -6,23 +6,14 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>Pilih Pelajaran</title>
 
+    
     <link rel="stylesheet" href="{{ asset('css/belajar.css') }}">
+    <link rel="stylesheet" href="{{ asset('css/style.css') }}">
 </head>
 <body>
 
 <!-- NAVBAR -->
-<nav class="navbar">
-  <div class="container nav-content">
-    <div class="logo">Neuroom</div>
-
-    <ul class="nav-menu">
-      <li><a href="/utama">Beranda</a></li>
-      <li><a href="/belajar">Belajar</a></li>
-      <li><a href="/pomodoro">Fokus</a></li>
-      <li><a href="/catatan">Catatan</a></li>
-    </ul>
-  </div>
-</nav>
+<x-navbar />
 
 <section class="choose-section">
 
@@ -70,26 +61,30 @@
     <h1 class="headline">Pilih Quiz sesuai kebutuhanmu</h1>
     <!-- CARD -->
     <div class="card-wrapper">
-        <a href="/utama" class="card">
-            <img src="{{ asset('img/umum.jpg') }}" class="card-img">
-            <h2>Pelajaran Umum</h2>
-            <p>Matematika, Bahasa Indonesia dan Bahasa Inggris.</p>
-            <span class="cta">Mulai Quiz →</span>
-        </a>
+    
+    <a href="{{ route('quiz.umum') }}" class="card">
+        <img src="{{ asset('img/umum.jpg') }}" class="card-img">
+        <h2>Pelajaran Umum</h2>
+        <p>Matematika, Bahasa Indonesia dan Bahasa Inggris.</p>
+        <span class="cta">Mulai Quiz →</span>
+    </a>
 
-        <a href="#" class="card">
-            <img src="{{ asset('img/jurusan.jpg') }}" class="card-img">
-            <h2>Pelajaran Kejuruan</h2>
-            <p>Materi sesuai jurusan seperti SIJA, RPL dan TKJ.</p>
-            <span class="cta">Mulai Quiz →</span>
-        </a>
-    </div>
+    <a href="{{ route('quiz.kejuruan') }}" class="card">
+        <img src="{{ asset('img/jurusan.jpg') }}" class="card-img">
+        <h2>Pelajaran Kejuruan</h2>
+        <p>Materi sesuai jurusan seperti SIJA, RPL dan TKJ.</p>
+        <span class="cta">Mulai Quiz →</span>
+    </a>
+
+</div>
 
 </section>
 
 <!-- SCRIPT -->
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 <script src="{{ asset('js/stateful-api.js') }}" defer></script>
 <script src="{{ asset('js/belajar-summary.js') }}" defer></script>
+
 
 </body>
 </html>

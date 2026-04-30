@@ -13,21 +13,7 @@
 <body>
 
 <!-- NAVBAR -->
-<nav class="navbar">
-    <div class="container nav-content">
-        <div class="logo">Neuroom</div>
-
-        <ul class="nav-menu">
-            <li><a href="/belajar">Belajar</a></li>
-            <li><a href="/fokus">Fokus</a></li>
-            <li><a href="/catatan">Catatan</a></li>
-        </ul>
-
-        <a href="{{ route('profile') }}" class="user-link">
-            Halo, <strong>{{ auth()->user()->username }}</strong>
-        </a>
-    </div>
-</nav>
+<x-navbar />
 
 <!-- TOAST -->
 <div id="loginToast" class="toast">
@@ -40,74 +26,124 @@
     </div>
 </div>
 
-<!-- HERO -->
+<!-- DASHBOARD -->
 <section class="dashboard">
     <div class="container">
 
         <!-- WELCOME -->
         <div class="card welcome">
-            <div>
-                <h1>Selamat datang kembali, <strong>{{ auth()->user()->username }}</strong> </h1>
-                <p>Mulai belajar atau lanjutkan progresmu.</p>
+
+            <div class="welcome-left">
+                <h1>
+                    Selamat datang kembali,
+                    <strong>{{ auth()->user()->username }}</strong>
+                </h1>
+
+                <p>
+                    Lanjutkan progres belajarmu hari ini bersama Neuroom.
+                </p>
 
                 <div class="stats">
+
                     <div class="stat">
-                        <span>Materi</span>
+                        <span>Total Materi</span>
                         <strong>12</strong>
                     </div>
+
                     <div class="stat">
-                        <span>Kuis</span>
+                        <span>Quiz Selesai</span>
                         <strong>7</strong>
                     </div>
+
+                    <div class="stat">
+                        <span>Catatan</span>
+                        <strong>15</strong>
+                    </div>
+
                 </div>
             </div>
 
-            <div class="card small">
-                <h3>Rekomendasi</h3>
+            <!-- REKOMENDASI -->
+            <div class="card small recommend-card">
+
+                <div class="title-row">
+                    <h3>Rekomendasi Untukmu</h3>
+                </div>
 
                 <div class="list">
-                    <div class="item">
-                        <div>
-                            <strong>Sistem Saraf</strong>
-                            <span>Rangkuman siap</span>
-                        </div>
-                        <span class="badge">Lanjut</span>
-                    </div>
 
-                    <div class="item">
+                    <!-- QUIZ -->
+                    <a href="/belajar" class="item clickable">
                         <div>
-                            <strong>Kuis Bab 1</strong>
-                            <span>10 soal</span>
+                            <strong>Belajar & Quiz</strong>
+                            <span>Belajar dan Kerjakan quiz terakhir kamu</span>
                         </div>
-                        <span class="badge">Mulai</span>
-                    </div>
+
+                        <span class="badge">Quiz</span>
+                    </a>
+
+                    <!-- CATATAN -->
+                    <a href="/catatan" class="item clickable">
+                        <div>
+                            <strong>Buka Catatan</strong>
+                            <span>Lihat catatan yang pernah dibuat</span>
+                        </div>
+
+                        <span class="badge">Catatan</span>
+                    </a>
+
+                    <!-- FOKUS -->
+                    <a href="/fokus" class="item clickable">
+                        <div>
+                            <strong>Mode Fokus</strong>
+                            <span>Mulai sesi pomodoro belajar</span>
+                        </div>
+
+                        <span class="badge">Fokus</span>
+                    </a>
+
                 </div>
             </div>
+
         </div>
 
-        <!-- ACTIVITY -->
-        <div class="card">
+        <!-- AKTIVITAS -->
+        <div class="card activity-card">
+
             <div class="title-row">
-                <h3>Aktivitas</h3>
-                <a href="/belajar">Lihat</a>
+                <h3>Aktivitas Terbaru</h3>
+                <a href="/history">Lihat Semua</a>
             </div>
 
             <div class="list">
-                <div class="item">
-                    <span>Upload file</span>
-                    <span class="badge">Selesai</span>
-                </div>
 
-                <div class="item">
-                    <span>Catatan dibuat</span>
-                    <span class="badge">AI</span>
-                </div>
+                {{-- nanti backend tinggal looping --}}
 
-                <div class="item">
-                    <span>Kuis dikerjakan</span>
-                    <span class="badge">80%</span>
-                </div>
+                @forelse ($activities ?? [] as $activity)
+
+                    <div class="item">
+
+                        <div class="activity-info">
+                            <strong>{{ $activity['title'] }}</strong>
+                            <span>{{ $activity['time'] }}</span>
+                        </div>
+
+                        <span class="badge">
+                            {{ $activity['status'] }}
+                        </span>
+
+                    </div>
+
+                @empty
+
+                    <div class="empty-state">
+                        <p>Belum ada aktivitas terbaru.</p>
+                    </div>
+
+                @endforelse
+
             </div>
+
         </div>
 
     </div>
@@ -118,17 +154,24 @@ const params = new URLSearchParams(window.location.search);
 const toast = document.getElementById('loginToast');
 
 if (params.get('login') === 'success') {
+
     toast.classList.add('show');
 
-    setTimeout(() => toast.classList.remove('show'), 3000);
+    setTimeout(() => {
+        toast.classList.remove('show');
+    }, 3000);
 
     const url = new URL(window.location.href);
     url.searchParams.delete('login');
+
     window.history.replaceState({}, '', url);
 }
 
-document.getElementById('toastClose')
-    .addEventListener('click', () => toast.classList.remove('show'));
+document
+    .getElementById('toastClose')
+    .addEventListener('click', () => {
+        toast.classList.remove('show');
+    });
 </script>
 
 </body>

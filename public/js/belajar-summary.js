@@ -24,14 +24,10 @@ function renderSummary(output) {
     return;
   }
 
-  const list = document.createElement('ul');
-  output.forEach((item) => {
-    const row = document.createElement('li');
-    row.textContent = item;
-    list.appendChild(row);
-  });
+  const markdownText = output.join('\n');
 
-  summaryOutput.appendChild(list);
+  
+  summaryOutput.innerHTML = marked.parse(markdownText);
 }
 
 // klik buka file

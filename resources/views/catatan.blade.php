@@ -5,115 +5,124 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Catatan — Neuroom</title>
 
+    <!-- CSS -->
     <link rel="stylesheet" href="{{ asset('css/style.css') }}">
     <link rel="stylesheet" href="{{ asset('css/catatan.css') }}">
+
+    <!-- ICON -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 </head>
 
 <body>
 
-<!-- NAVBAR -->
-<nav class="navbar">
-    <div class="container nav-content">
-        <div class="logo">Neuroom</div>
-
-        <ul class="nav-menu">
-            <li><a href="/">Beranda</a></li>
-            <li><a href="/belajar">Belajar</a></li>
-            <li><a href="/pomodoro">Fokus</a></li>
-            <li><a href="/catatan">Catatan</a></li>
-        </ul>
-    </div>
-</nav>
+<x-navbar />
 
 <div class="container page">
 
-    <!-- =========================
-         PELAJARAN UMUM
-    ========================= -->
-    <div class="section">
-        <h2>Pelajaran Umum</h2>
+    <h2 class="title">Catatan Saya</h2>
 
-        <div class="grid">
-
-            {{-- 🔸 BACKEND: loop data umum --}}
-            @foreach($umum ?? [] as $item)
-            <div class="card">
-
-                <div class="card-header">
-                    <h3>{{ $item->title }}</h3>
-
-                    {{-- 🔸 BACKEND: status --}}
-                    @if($item->is_completed)
-                        <span class="badge success">Selesai</span>
-                    @endif
-
-                    @if($item->is_opened)
-                        <span class="badge info">Dibuka</span>
-                    @endif
-                </div>
-
-                <p class="desc">
-                    {{ Str::limit($item->summary, 100) }}
-                </p>
-
-                {{-- 🔸 BACKEND: route ke detail --}}
-                <a href="{{ route('catatan.show', $item->id) }}" class="btn">
-                    Lihat Catatan
-                </a>
-
-            </div>
-            @endforeach
-
-            @if(empty($umum))
-                <p class="empty">Belum ada catatan umum</p>
-            @endif
-
-        </div>
+    <!-- SEARCH -->
+    <div class="notes-header">
+    <div class="search-box">
+        <i class="fa-solid fa-magnifying-glass"></i>
+        <input type="text" id="searchInput" placeholder="Cari catatan...">
     </div>
+</div>
 
-    <!-- =========================
-         KEJURUAN
-    ========================= -->
-    <div class="section">
-        <h2>Kejuruan</h2>
+    <!-- NOTES -->
+    <div class="notes-grid">
 
-        <div class="grid">
+        @forelse($notes ?? [] as $note)
+        <div class="note-card" data-title="{{ strtolower($note->title) }}">
+            <h3>{{ $note->title }}</h3>
 
-            {{-- 🔸 BACKEND: loop data kejuruan --}}
-            @foreach($kejuruan ?? [] as $item)
-            <div class="card">
+            <p>
+                {{ Str::limit(strip_tags($note->content), 100) }}
+            </p>
 
-                <div class="card-header">
-                    <h3>{{ $item->title }}</h3>
+            <div class="note-meta">
+                {{ date('d M Y', strtotime($note->created_at)) }}
+            </div>
 
-                    @if($item->is_completed)
-                        <span class="badge success">Selesai</span>
-                    @endif
+            <div class="note-actions">
 
-                    @if($item->is_opened)
-                        <span class="badge info">Dibuka</span>
-                    @endif
-                </div>
+                <!-- VIEW -->
+                <button class="open-view"
+                    data-title="{{ $note->title }}"
+                    data-content="{{ $note->content }}">
+                    <i class="fa-solid fa-eye"></i>
+                </button>
 
-                <p class="desc">
-                    {{ Str::limit($item->summary, 100) }}
-                </p>
+                <!-- EDIT -->
+                <button class="open-edit"
+                    data-title="{{ $note->title }}"
+                    data-content="{{ $note->content }}">
+                    <i class="fa-solid fa-pen"></i>
+                </button>
 
-                <a href="{{ route('catatan.show', $item->id) }}" class="btn">
-                    Lihat Catatan
-                </a>
+                <!-- DELETE -->
+                <button class="btn-delete"
+                    data-id="{{ $note->id }}">
+                    <i class="fa-solid fa-trash"></i>
+                </button>
 
             </div>
-            @endforeach
-
-            @if(empty($kejuruan))
-                <p class="empty">Belum ada catatan kejuruan</p>
-            @endif
-
         </div>
+
+        @empty
+        <div class="empty-state">
+            <h3>Belum ada catatan</h3>
+            <p>Mulai belajar dan buat catatan pertamamu 🚀</p>
+            <a href="/belajar" class="btn-primary">Mulai Belajar</a>
+        </div>
+        @endforelse
+
     </div>
 
 </div>
+
+<!-- FLOAT BUTTON -->
+<button class="fab" id="addNote">
+    <i class="fa-solid fa-plus"></i>
+</button>
+
+<!-- MODAL VIEW -->
+<div class="modal" id="viewModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 id="viewTitle"></h3>
+            <button class="close">&times;</button>
+        </div>
+        <div id="viewContent" class="note-view"></div>
+    </div>
+</div>
+
+<!-- MODAL EDIT -->
+<div class="modal" id="editModal">
+    <div class="modal-content">
+
+        <div class="modal-header">
+            <input id="editTitle" placeholder="Judul catatan...">
+            <button class="close">&times;</button>
+        </div>
+
+        <div class="toolbar">
+            <button onclick="formatText('bold')"><b>B</b></button>
+            <button onclick="formatText('italic')"><i>I</i></button>
+            <button onclick="formatText('underline')"><u>U</u></button>
+        </div>
+
+        <div id="editor" contenteditable="true"></div>
+
+        <div class="modal-footer">
+            <button class="btn" id="saveNote">Simpan</button>
+        </div>
+
+    </div>
+</div>
+
+<!-- JS -->
+<script src="{{ asset('js/catatan.js') }}"></script>
 
 </body>
 </html>

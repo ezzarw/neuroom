@@ -22,26 +22,6 @@ body {
 }
 
 /* =========================
-   NAVBAR
-========================= */
-.navbar {
-    background: var(--primary);
-    color: white;
-    padding: 14px 0;
-}
-
-.nav-menu {
-    display: flex;
-    gap: 20px;
-    list-style: none;
-}
-
-.nav-menu a {
-    color: white;
-    text-decoration: none;
-}
-
-/* =========================
    LAYOUT (KIRI - KANAN)
 ========================= */
 .pomodoro {
