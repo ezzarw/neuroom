@@ -19,7 +19,6 @@ Dokumen ini merangkum apa yang sudah diamankan di Neuroom dan apa yang masih per
 - frontend sekarang membaca:
   - `response.data`
   - `response.errors`
-  - `response.meta`
 - dokumentasi kontrak API sekarang ada di `docs/API_RESPONSE_JSON.md`
 
 ## Risiko Yang Harus Tetap Dijaga
@@ -59,10 +58,9 @@ Yang harus dihindari:
 Yang harus dipakai:
 
 - `success`
-- `message`
+- `reason`
 - `data`
 - `errors`
-- `meta`
 
 Yang harus dihindari:
 
@@ -101,7 +99,7 @@ Masalah yang masih bisa bikin aplikasi terlihat rusak padahal bukan bug aplikasi
 
 - [x] Helper fetch memakai cookie session + CSRF
 - [x] Endpoint utama diarahkan ke `/api/v1`
-- [x] Payload dibaca dari `data` dan `meta`
+- [x] Payload dibaca dari `data`
 - [ ] Smoke test ulang semua halaman setelah perubahan kontrak
 - [ ] Cari sisa file JS yang masih memanggil endpoint lama
 

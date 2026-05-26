@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Auth as Authentication;
 use App\Models\User;
 use DateTime;
 use Illuminate\Http\Request;
@@ -19,21 +18,16 @@ class UserController extends Controller
             'profile_picture' => 'image|mimes:jpeg,png,jpg|max:10000|nullable',
         ]);
 
-        $username = $request->user()->username;
+        $user = $request->user();
         $display_name = $request->display_name;
         $email = $request->email;
         $profile_picture = $request->file('profile_picture');
 
-        $row_authentications = Authentication::where('username', $username)->first();
-        $row_users = $row_authentications
-            ? User::where('auth_id', $row_authentications->id)->first()
-            : null;
-
-        if ($row_users == null || $row_authentications == null) {
+        if ($user === null) {
             return $this->apiError('User tidak ditemukan.', 404);
         }
 
-        $old_profile_picture = $row_users->profile_picture;
+        $old_profile_picture = $user->profile_picture;
 
         if (is_null($profile_picture) == false) {
             $dt = new DateTime;
@@ -44,8 +38,8 @@ class UserController extends Controller
         }
 
         if (is_null($email) == false) {
-            if ($row_authentications->email != $email) {
-                if (Authentication::where('email', $email)->exists()) {
+            if ($user->email != $email) {
+                if (User::where('email', $email)->exists()) {
                     return $this->apiError(
                         'Email sudah digunakan.',
                         422,
@@ -70,15 +64,15 @@ class UserController extends Controller
                 $profile_picture->storeAs('profile_picture', $sanitized_name, 'public');
             }
 
-            DB::transaction(function () use ($row_users, $input_not_null, $row_authentications, $email) {
-                if (count($input_not_null) > 0) {
-                    $row_users->update($input_not_null);
+            DB::transaction(function () use ($user, $input_not_null, $email) {
+                if (is_null($email) == false) {
+                    if ($user->email != $email) {
+                        $input_not_null['email'] = $email;
+                    }
                 }
 
-                if (is_null($email) == false) {
-                    if ($row_authentications->email != $email) {
-                        $row_authentications->update(['email' => $email]);
-                    }
+                if (count($input_not_null) > 0) {
+                    $user->update($input_not_null);
                 }
             });
         } catch (\Throwable $e) { //kalo misal gagal tapi filenya masih nyangkkut, otomatis kedelete (jika nyangkut)
@@ -99,29 +93,21 @@ class UserController extends Controller
             }
         }
 
-        if (is_null($email) == false) {
-            if ($row_authentications->email != $email) {
-                $input_not_null['email'] = $email;
-            }
-        }
+        $user->refresh();
 
-        $row_users->refresh();
-        $row_authentications->refresh();
-
-        return $this->apiSuccess('Profil berhasil diupdate.', [
-            'user' => [
-                'id' => $row_authentications->id,
-                'username' => $row_authentications->username,
-                'email' => $row_authentications->email,
-                'is_admin' => (int) $row_authentications->is_admin,
-                'display_name' => $row_users->display_name,
-                'profile_picture' => $row_users->profile_picture,
-                'profile_picture_url' => $row_users->profile_picture ? asset('storage/profile_picture/'.$row_users->profile_picture) : null,
-                'created_at' => $this->formatDateTime($row_users->created_at),
-                'updated_at' => $this->formatDateTime($row_users->updated_at),
-                'auth_created_at' => $this->formatDateTime($row_authentications->created_at),
-                'auth_updated_at' => $this->formatDateTime($row_authentications->updated_at),
-            ],
-        ]);
+        return $this->apiSuccess(
+            'Profil berhasil diupdate.',
+            [
+                'id' => $user->id,
+                'username' => $user->username,
+                'email' => $user->email,
+                'is_admin' => (int) $user->is_admin,
+                'display_name' => $user->display_name,
+                'profile_picture' => $user->profile_picture,
+                'profile_picture_url' => $user->profile_picture ? asset('storage/profile_picture/'.$user->profile_picture) : null,
+                'created_at' => $this->formatDateTime($user->created_at),
+                'updated_at' => $this->formatDateTime($user->updated_at),
+            ]
+        );
     }
 }

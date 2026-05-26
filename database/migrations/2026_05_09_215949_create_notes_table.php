@@ -10,15 +10,12 @@ return new class extends Migration
      * Run the migrations.
      */
     public function up(): void
-    {   
-        Schema::create('users', function (Blueprint $table) {
+    {
+        Schema::create('notes', function (Blueprint $table) {
             $table->id();
-            $table->string('username')->unique();
-            $table->string('display_name', 100);
-            $table->string('profile_picture')->nullable();
-            $table->string('email')->unique();
-            $table->string('password');
-            $table->tinyInteger('is_admin')->default(0);
+            $table->foreignId('user_id')->constrained('users');
+            $table->string('title', 200);
+            $table->text('content');
             $table->timestamps();
         });
     }
@@ -28,6 +25,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('users');
+        Schema::dropIfExists('notes');
     }
 };

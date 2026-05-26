@@ -20,12 +20,11 @@ Perubahan terbaru yang sudah masuk ke code:
 1. Route API `/api/v1` dihidupkan kembali dan sekarang aktif untuk auth, profile, summary, pomodoro, dan admin.
 2. Semua response JSON backend diseragamkan ke format:
    - `success`
-   - `message`
+   - `reason`
    - `data`
    - `errors`
-   - `meta`
-3. Exception JSON untuk validasi dan auth dirender konsisten dari `bootstrap/app.php`.
-4. Frontend fetch diarahkan ke `/api/v1/...` dan membaca payload baru dari `data` dan `meta`.
+ 3. Exception JSON untuk validasi dan auth dirender konsisten dari `bootstrap/app.php`.
+4. Frontend fetch diarahkan ke `/api/v1/...` dan membaca payload baru dari `data`.
 5. Dokumentasi lama yang menyebut “web-only tanpa API” sudah tidak lagi akurat.
 
 ## Struktur Route
@@ -65,9 +64,8 @@ Dipakai untuk data dan aksi via fetch:
 ```json
 {
   "success": true,
-  "message": "OK",
-  "data": {},
-  "meta": {}
+  "reason": "OK",
+  "data": {}
 }
 ```
 
@@ -76,16 +74,14 @@ Dipakai untuk data dan aksi via fetch:
 ```json
 {
   "success": false,
-  "message": "Terjadi error.",
-  "errors": {},
-  "meta": {}
+  "reason": "Terjadi error.",
+  "errors": {}
 }
 ```
 
 Catatan:
 
 - `data` adalah payload bisnis utama
-- `meta` untuk konteks tambahan seperti `redirect_to` atau `fallback`
 - validasi field masuk ke `errors`
 
 ## Middleware dan Auth

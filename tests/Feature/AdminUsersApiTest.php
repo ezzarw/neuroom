@@ -3,7 +3,6 @@
 namespace Tests\Feature;
 
 use App\Models\Auth;
-use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -20,10 +19,8 @@ class AdminUsersApiTest extends TestCase
             'is_admin' => 1,
         ]);
 
-        User::create([
-            'username' => 'admin',
+        $admin->user()->create([
             'display_name' => 'Administrator',
-            'email' => 'admin@example.com',
             'profile_picture' => null,
         ]);
 

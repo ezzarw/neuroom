@@ -11,10 +11,9 @@ Dokumen ini merangkum route aktif Neuroom per April 2026. Kondisi terbaru aplika
 - Frontend AJAX/fetch memakai cookie session browser, bukan bearer token
 - Semua response API JSON sekarang mengikuti kontrak standar:
   - `success`
-  - `message`
+  - `reason`
   - `data`
   - `errors`
-  - `meta`
 - Route API aktif ada di `/api/v1/...`
 
 ## Route Web
@@ -93,7 +92,7 @@ Field:
 Success:
 - status `201`
 - login otomatis
-- `meta.redirect_to` ke `GET /utama`
+- tidak mengirim redirect; frontend menentukan navigasi sendiri
 
 #### `POST /api/v1/auth/login`
 
@@ -109,7 +108,7 @@ Field:
 
 Success:
 - status `200`
-- `meta.redirect_to` ke `GET /utama` atau `GET /admin`
+- tidak mengirim redirect; frontend menentukan navigasi sendiri
 
 #### `POST /api/v1/auth/logout`
 
@@ -121,7 +120,7 @@ Success:
 - logout session
 - invalidate session
 - regenerate CSRF token
-- `meta.redirect_to` ke `/`
+- tidak mengirim redirect; frontend menentukan navigasi sendiri
 
 #### `GET /api/v1/me`
 
@@ -149,7 +148,7 @@ Field:
 
 Success:
 - status `200`
-- data user terbaru di `data.user`
+- data user terbaru langsung di `data`
 
 ### Summary
 
@@ -167,12 +166,12 @@ Field:
 
 Success:
 - status `200`
-- hasil ringkasan di `data.summary`
+- hasil ringkasan langsung di `data`
 
 Fallback:
 - kalau `GEMINI_API_KEY` kosong, API tetap `200`
-- `data.summary.status = fallback`
-- `meta.fallback = true`
+- `data.status = fallback`
+- `data.fallback = true`
 
 ### Pomodoro
 
@@ -183,7 +182,7 @@ Middleware:
 
 Success:
 - status `200`
-- 20 sesi terakhir user aktif di `data.sessions`
+- 20 sesi terakhir user aktif langsung di `data`
 
 #### `POST /api/v1/pomodoro/history`
 
@@ -217,13 +216,13 @@ Success:
 
 Success:
 - status `200`
-- daftar sesi pomodoro di `data.sessions`
+- daftar sesi pomodoro langsung di `data`
 
 #### `GET /api/v1/admin/users`
 
 Success:
 - status `200`
-- daftar user di `data.users`
+- daftar user langsung di `data`
 
 #### `POST /api/v1/admin/users`
 
@@ -237,7 +236,7 @@ Field:
 
 Success:
 - status `201`
-- user baru di `data.user`
+- user baru langsung di `data`
 
 #### `PUT /api/v1/admin/users/{user}`
 
@@ -252,13 +251,13 @@ Field:
 
 Success:
 - status `200`
-- user terbaru di `data.user`
+- user terbaru langsung di `data`
 
 #### `DELETE /api/v1/admin/users/{user}`
 
 Success:
 - status `200`
-- tidak ada payload bisnis, hanya message sukses
+- tidak ada payload bisnis, hanya reason sukses
 
 ## Pola Response API
 
@@ -269,13 +268,8 @@ Semua endpoint JSON mengikuti bentuk ini:
 ```json
 {
   "success": true,
-  "message": "Login berhasil.",
-  "data": {
-    "user": {}
-  },
-  "meta": {
-    "redirect_to": "/utama"
-  }
+  "reason": "Login berhasil.",
+  "data": {}
 }
 ```
 
@@ -284,11 +278,10 @@ Semua endpoint JSON mengikuti bentuk ini:
 ```json
 {
   "success": false,
-  "message": "Validasi gagal.",
+  "reason": "Validasi gagal.",
   "errors": {
     "email": ["Email sudah digunakan."]
-  },
-  "meta": {}
+  }
 }
 ```
 

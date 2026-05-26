@@ -5,6 +5,7 @@ use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Validation\ValidationException;
+use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 
 return Application::configure(basePath: dirname(__DIR__))
@@ -23,46 +24,52 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        $exceptions->render(function (ValidationException $exception, $request) {
-            if (! $request->expectsJson()) {
+        $wantsJson = fn ($request): bool => $request->expectsJson() || $request->is('api/*');
+
+        $jsonError = fn (string $reason, int $status, array $errors = []) => response()->json([
+            'success' => false,
+            'reason' => $reason,
+            'errors' => (object) $errors,
+        ], $status);
+
+        $exceptions->render(function (ValidationException $exception, $request) use ($wantsJson, $jsonError) {
+            if (! $wantsJson($request)) {
                 return null;
             }
 
-            return response()->json([
-                'success' => false,
-                'message' => 'Validasi gagal.',
-                'errors' => (object) $exception->errors(),
-                'meta' => (object) [],
-            ], $exception->status);
+            return $jsonError('Validasi gagal.', $exception->status, $exception->errors());
         });
 
-        $exceptions->render(function (AuthenticationException $exception, $request) {
-            if (! $request->expectsJson()) {
+        $exceptions->render(function (AuthenticationException $exception, $request) use ($wantsJson, $jsonError) {
+            if (! $wantsJson($request)) {
                 return null;
             }
 
-            return response()->json([
-                'success' => false,
-                'message' => 'Unauthenticated.',
-                'errors' => (object) [],
-                'meta' => (object) [],
-            ], 401);
+            return $jsonError('Silakan login terlebih dahulu.', Response::HTTP_UNAUTHORIZED);
         });
 
-        $exceptions->render(function (\Throwable $exception, $request) {
-            if (! $request->expectsJson()) {
+        $exceptions->render(function (\Throwable $exception, $request) use ($wantsJson, $jsonError) {
+            if (! $wantsJson($request)) {
                 return null;
             }
 
-            if (! $exception instanceof HttpExceptionInterface) {
-                return null;
-            }
+            $status = $exception instanceof HttpExceptionInterface
+                ? $exception->getStatusCode()
+                : Response::HTTP_INTERNAL_SERVER_ERROR;
 
-            return response()->json([
-                'success' => false,
-                'message' => $exception->getMessage() !== '' ? $exception->getMessage() : 'HTTP error.',
-                'errors' => (object) [],
-                'meta' => (object) [],
-            ], $exception->getStatusCode());
+            $reason = match ($status) {
+                Response::HTTP_BAD_REQUEST => 'Request tidak valid.',
+                Response::HTTP_UNAUTHORIZED => 'Silakan login terlebih dahulu.',
+                Response::HTTP_FORBIDDEN => 'Akses ditolak.',
+                Response::HTTP_NOT_FOUND => 'Data atau endpoint tidak ditemukan.',
+                Response::HTTP_METHOD_NOT_ALLOWED => 'Method request tidak diizinkan.',
+                Response::HTTP_TOO_MANY_REQUESTS => 'Terlalu banyak request. Coba lagi nanti.',
+                Response::HTTP_CONFLICT => 'Request konflik dengan kondisi data saat ini.',
+                default => $status >= 500
+                    ? 'Terjadi kesalahan pada server. ' 
+                    : ($exception->getMessage() !== '' ? $exception->getMessage() : 'Request gagal.'),
+            };
+
+            return $jsonError($reason, $status);
         });
     })->create();

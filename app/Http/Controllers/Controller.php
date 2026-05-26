@@ -2,30 +2,28 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Auth;
+use App\Models\User;
 use DateTimeInterface;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Str;
 
 abstract class Controller
 {
-    protected function apiSuccess(string $message, array $data = [], int $status = 200, array $meta = []): JsonResponse
+    protected function apiSuccess(string $reason, array $data = [], int $status = 200): JsonResponse
     {
         return response()->json([
             'success' => true,
-            'message' => $message,
+            'reason' => $reason,
             'data' => $data,
-            'meta' => (object) $meta,
         ], $status);
     }
 
-    protected function apiError(string $message, int $status = 400, array $errors = [], array $meta = []): JsonResponse
+    protected function apiError(string $reason, int $status = 400, array $errors = []): JsonResponse
     {
         return response()->json([
             'success' => false,
-            'message' => $message,
+            'reason' => $reason,
             'errors' => (object) $errors,
-            'meta' => (object) $meta,
         ], $status);
     }
 
@@ -35,11 +33,11 @@ abstract class Controller
         $base = $base === '' ? Str::lower(Str::random(8)) : $base;
         $uniqueUsername = $base;
 
-        if (! Auth::where('username', $uniqueUsername)->exists()) {
+        if (! User::where('username', $uniqueUsername)->exists()) {
             return $uniqueUsername;
         }
 
-        $taken = Auth::where('username', 'like', $base.'%')
+        $taken = User::where('username', 'like', $base.'%')
             ->pluck('username')
             ->all();
 

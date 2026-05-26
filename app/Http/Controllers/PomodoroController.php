@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Models\PomodoroHistory;
-use App\Models\User;
 use Illuminate\Http\Request;
 
 class PomodoroController extends Controller
@@ -14,23 +13,24 @@ class PomodoroController extends Controller
             'duration_seconds' => ['required', 'integer', 'min:1'],
         ]);
 
-        $profile = User::query()
-            ->where('auth_id', $request->user()->id)
-            ->firstOrFail();
+        $user = $request->user();
 
-        $session = PomodoroHistory::query()
-            ->where('user_id', $profile->id)
+        if ($user === null) {
+            return $this->apiError('User tidak ditemukan.', 404);
+        }
+
+        $session = $user->pomodoroHistories()
             ->whereDate('created_at', now()->toDateString())
             ->count() + 1;
 
-        $history = PomodoroHistory::create([
-            'user_id' => $profile->id,
+        $history = $user->pomodoroHistories()->create([
             'session' => $session,
             'duration_seconds' => $validated['duration_seconds'],
         ]);
 
-        return $this->apiSuccess('Data pomodoro berhasil ditambahkan.', [
-            'session' => [
+        return $this->apiSuccess(
+            'Data pomodoro berhasil ditambahkan.',
+            [
                 'id' => $history->id,
                 'session' => $history->session,
                 'date' => $history->created_at?->toDateString(),
@@ -38,17 +38,19 @@ class PomodoroController extends Controller
                 'duration' => $this->formatDuration((int) $history->duration_seconds),
                 'created_at' => $this->formatDateTime($history->created_at),
             ],
-        ], 201);
+            201
+        );
     }
 
     public function history(Request $request)
     {
-        $profile = User::query()
-            ->where('auth_id', $request->user()->id)
-            ->firstOrFail();
+        $user = $request->user();
 
-        $sessions = PomodoroHistory::query()
-            ->where('user_id', $profile->id)
+        if ($user === null) {
+            return $this->apiError('User tidak ditemukan.', 404);
+        }
+
+        $sessions = $user->pomodoroHistories()
             ->latest()
             ->limit(20)
             ->get()
@@ -62,8 +64,9 @@ class PomodoroController extends Controller
             ])
             ->values();
 
-        return $this->apiSuccess('Riwayat pomodoro berhasil diambil.', [
-            'sessions' => $sessions,
-        ]);
+        return $this->apiSuccess(
+            'Riwayat pomodoro berhasil diambil.',
+            $sessions->all()
+        );
     }
 }

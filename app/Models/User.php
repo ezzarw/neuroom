@@ -2,25 +2,30 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Notifications\Notifiable;
 
-class User extends Model
+class User extends Authenticatable
 {
-        protected $fillable = [
-            'auth_id',
-            'display_name',
-            'profile_picture'
-        ];
+    use Notifiable;
 
+    protected $fillable = [
+        'username',
+        'display_name',
+        'profile_picture',
+        'email',
+        'password',
+        'is_admin',
+    ];
 
-        public function auth(): BelongsTo {
-            return $this->belongsTo(Auth::class, 'auth_id');
-        }
+    protected $hidden = [
+        'password',
+        'remember_token',
+    ];
 
-        public function pomodoroHistories(): HasMany {
-            return $this->hasMany(PomodoroHistory::class);
-        }
-        
+    public function pomodoroHistories(): HasMany
+    {
+        return $this->hasMany(PomodoroHistory::class);
+    }
 }

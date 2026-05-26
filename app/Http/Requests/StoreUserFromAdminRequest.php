@@ -3,10 +3,8 @@
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rules\Password;
-use Illuminate\Validation\Rule;
 
-class RegisterUserRequest extends FormRequest
+class StoreUserFromAdminRequest extends FormRequest
 {
     /**
      * Determine if the user is authorized to make this request.
@@ -25,7 +23,7 @@ class RegisterUserRequest extends FormRequest
     {
         return [
             'username' => ['string', 'required', 'max:100'],
-            'password' => ['string', 'required', Password::min(8)->letters()->mixedCase()->numbers()],
+            'password' => ['string', 'required', 'min:8'],
             'email' => ['string', 'required', 'email', 'max:100', 'unique:users,email'],
         ];
     }

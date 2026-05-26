@@ -10,7 +10,8 @@ Frontend Neuroom sekarang memakai pola berikut:
 - data dinamis diambil lewat fetch ke `/api/v1/...`
 - autentikasi tetap berbasis cookie session browser
 - semua request API harus kirim CSRF token
-- semua response API dibaca dari format standar `success/message/data/errors/meta`
+- response sukses dibaca dari format standar `success/reason/data`
+- response error dibaca dari format standar `success/reason/errors`
 
 Jangan pakai pola ini:
 
@@ -24,10 +25,10 @@ Jangan pakai pola ini:
 Perubahan terbaru yang harus diikuti frontend:
 
 1. Endpoint fetch resmi pindah ke `/api/v1/...`.
-2. Response JSON sekarang selalu dibungkus di `data` dan `meta`.
-3. Redirect hasil login/register/logout dibaca dari `response.meta.redirect_to`.
-4. Hasil resource utama dibaca dari `response.data`.
-5. Error validasi dibaca dari `response.errors`.
+2. Response sukses tidak membawa `errors`.
+3. Hasil resource utama dibaca langsung dari `response.data`.
+4. Error validasi dibaca dari `response.errors`.
+5. Auth tidak mengirim redirect; frontend menentukan navigasi sendiri.
 
 ## Format Response Yang Harus Dipakai Frontend
 
@@ -36,13 +37,8 @@ Perubahan terbaru yang harus diikuti frontend:
 ```json
 {
   "success": true,
-  "message": "Login berhasil.",
-  "data": {
-    "user": {}
-  },
-  "meta": {
-    "redirect_to": "/utama"
-  }
+  "reason": "Login berhasil.",
+  "data": {}
 }
 ```
 
@@ -51,11 +47,10 @@ Perubahan terbaru yang harus diikuti frontend:
 ```json
 {
   "success": false,
-  "message": "Validasi gagal.",
+  "reason": "Validasi gagal.",
   "errors": {
     "email": ["Email sudah digunakan."]
-  },
-  "meta": {}
+  }
 }
 ```
 
@@ -63,8 +58,7 @@ Contoh baca di frontend:
 
 ```js
 const response = await window.NeuroomApi.request('/api/v1/me');
-const user = response.data?.user;
-const redirectTo = response.meta?.redirect_to;
+const user = response.data;
 const fieldErrors = response.errors || {};
 ```
 
@@ -127,9 +121,8 @@ Field login:
 
 Setelah sukses:
 
-- baca `response.message`
-- redirect ke `response.meta.redirect_to`
-- data user ada di `response.data.user`
+- baca `response.reason`
+- data user ada langsung di `response.data`
 
 ### Profile
 
@@ -141,7 +134,7 @@ Field:
 
 Setelah sukses:
 
-- update UI dari `response.data.user`
+- update UI dari `response.data`
 
 ### Summary
 
@@ -157,10 +150,10 @@ Nilai `bahasa`:
 
 Setelah sukses:
 
-- hasil ada di `response.data.summary`
-- status ringkasan ada di `response.data.summary.status`
-- poin ringkasan ada di `response.data.summary.output`
-- kalau fallback, cek `response.meta.fallback === true`
+- hasil ada langsung di `response.data`
+- status ringkasan ada di `response.data.status`
+- poin ringkasan ada di `response.data.output`
+- kalau fallback, cek `response.data.fallback === true`
 
 ### Pomodoro
 
@@ -170,13 +163,13 @@ Store:
 
 Read history:
 
-- baca array dari `response.data.sessions`
+- baca array langsung dari `response.data`
 
 ### Admin Users
 
 List:
 
-- baca array dari `response.data.users`
+- baca array langsung dari `response.data`
 
 Create:
 
@@ -193,7 +186,7 @@ Update:
 
 Delete:
 
-- cukup baca `response.message`
+- cukup baca `response.reason`
 
 ## CSRF dan Session
 
@@ -216,7 +209,7 @@ Yang wajib:
 
 - [x] Pakai `/api/v1/...`
 - [x] Baca payload dari `response.data`
-- [x] Baca redirect dari `response.meta.redirect_to`
+- [x] Baca alasan response dari `response.reason`
 - [x] Baca validasi dari `response.errors`
 - [ ] Lakukan smoke test semua halaman setelah update kontrak JSON
 - [ ] Pastikan tidak ada lagi file JS yang memanggil endpoint `/api/...` lama

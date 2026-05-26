@@ -2,24 +2,52 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Auth as Authentication;
+use App\Http\Requests\StoreUserFromAdminRequest;
 use App\Models\PomodoroHistory;
 use App\Models\User;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Carbon;
 use Illuminate\Validation\Rule;
 
 class AdminController extends Controller
 {
+    protected function basePomodoroSessionsQuery(): Builder
+    {
+        return PomodoroHistory::query()
+            ->select([
+                'id',
+                'user_id',
+                'session',
+                'duration_seconds',
+                'created_at',
+                'updated_at',
+            ])
+            ->with([
+                'user:id,username',
+            ]);
+    }
+
+    protected function baseUsersQuery(): Builder
+    {
+        return User::query()
+            ->select([
+                'id',
+                'username',
+                'display_name',
+                'email',
+                'is_admin',
+                'created_at',
+                'updated_at',
+            ]);
+    }
+
     protected function transformPomodoroSession(PomodoroHistory $session): array
     {
-        $session->loadMissing('user.auth');
-
         return [
             'id' => $session->id,
-            'username' => $session->user?->auth?->username,
+            'username' => $session->user?->username,
             'session' => $session->session,
             'date' => $session->created_at?->toDateString(),
             'duration_seconds' => (int) ($session->duration_seconds ?? 0),
@@ -29,45 +57,29 @@ class AdminController extends Controller
         ];
     }
 
-    protected function transformUserRow(object $row): array
+    protected function transformUserRow(User $user): array
     {
         return [
-            'id' => $row->id,
-            'username' => $row->username,
-            'display_name' => $row->display_name,
-            'email' => $row->email,
-            'is_admin' => (int) $row->is_admin,
-            'created_at' => $row->created_at ? $this->formatDateTime(Carbon::parse($row->created_at)) : null,
-            'auth_updated_at' => $row->auth_updated_at ? $this->formatDateTime(Carbon::parse($row->auth_updated_at)) : null,
-            'updated_at' => $row->updated_at ? $this->formatDateTime(Carbon::parse($row->updated_at)) : null,
+            'id' => $user->id,
+            'username' => $user->username,
+            'display_name' => $user->display_name,
+            'email' => $user->email,
+            'is_admin' => (int) $user->is_admin,
+            'created_at' => $this->formatDateTime($user->created_at),
+            'updated_at' => $this->formatDateTime($user->updated_at),
         ];
-    }
-
-    protected function baseUsersQuery()
-    {
-        return Authentication::query()
-            ->leftJoin('users', 'auths.id', '=', 'users.auth_id')
-            ->select(
-                'auths.id',
-                'auths.username',
-                'users.display_name',
-                'auths.email',
-                'auths.is_admin',
-                'users.created_at',
-                'auths.updated_at as auth_updated_at',
-                'users.updated_at'
-            );
     }
 
     public function usersPage()
     {
-        return view('admin.users');
+        return $this->apiSuccess('Halaman admin users tersedia.', [
+            'page' => 'admin.users',
+        ]);
     }
 
     public function dashboard()
     {
-        $latestSessions = PomodoroHistory::query()
-            ->with('user.auth')
+        $latestSessions = $this->basePomodoroSessionsQuery()
             ->latest()
             ->limit(10)
             ->get()
@@ -76,7 +88,7 @@ class AdminController extends Controller
 
         return $this->apiSuccess('Dashboard admin berhasil diambil.', [
             'stats' => [
-                'total_users' => Authentication::count(),
+                'total_users' => User::count(),
                 'total_sessions' => PomodoroHistory::count(),
                 'active_today' => PomodoroHistory::query()
                     ->whereDate('created_at', now()->toDateString())
@@ -89,68 +101,59 @@ class AdminController extends Controller
 
     public function pomodoroSessions()
     {
-        $sessions = PomodoroHistory::query()
-            ->with('user.auth')
+        $sessions = $this->basePomodoroSessionsQuery()
             ->latest()
             ->limit(50)
             ->get()
             ->map(fn (PomodoroHistory $session) => $this->transformPomodoroSession($session))
             ->values();
 
-        return $this->apiSuccess('Data pomodoro admin berhasil diambil.', [
-            'sessions' => $sessions,
-        ]);
+        return $this->apiSuccess(
+            'Data pomodoro admin berhasil diambil.',
+            $sessions->all()
+        );
     }
 
     public function index()
     {
         $users = $this->baseUsersQuery()
-            ->orderBy('auths.id')
+            ->orderBy('id')
             ->get()
-            ->map(fn (object $row) => $this->transformUserRow($row))
+            ->map(fn (User $user) => $this->transformUserRow($user))
             ->values();
 
-        return $this->apiSuccess('Daftar user berhasil diambil.', [
-            'users' => $users,
-        ]);
+        return $this->apiSuccess(
+            'Daftar user berhasil diambil.',
+            $users->all()
+        );
     }
 
-    public function store(Request $request)
+    public function store(StoreUserFromAdminRequest $request)
     {
-        $validated = $request->validate([
-            'username' => ['string', 'required', 'max:100'],
-            'password' => ['string', 'required', 'min:8'],
-            'email' => ['string', 'required', 'email', 'max:100', 'unique:auths,email'],
-        ]);
+        $validated = $request->validated();
 
-        $displayName = $validated['username'];
-        $uniqueUsername = $this->generateUniqueUsername($validated['username']);
-        $hashedPassword = Hash::make($validated['password']);
+        $displayName = trim($validated['username']);
+        $uniqueUsername = $this->generateUniqueUsername($displayName);
 
-        DB::transaction(function () use ($uniqueUsername, $validated, $hashedPassword, $displayName) {
-            $auth = Authentication::create([
+        $created = DB::transaction(function () use ($uniqueUsername, $validated, $displayName) {
+            return User::create([
                 'username' => $uniqueUsername,
-                'email' => $validated['email'],
-                'password' => $hashedPassword,
-            ]);
-
-            User::create([
-                'auth_id' => $auth->id,
                 'display_name' => $displayName,
+                'email' => $validated['email'],
+                'password' => Hash::make($validated['password']),
+                'is_admin' => 0,
                 'profile_picture' => null,
             ]);
         });
 
-        $created = $this->baseUsersQuery()
-            ->where('auths.username', $uniqueUsername)
-            ->firstOrFail();
-
-        return $this->apiSuccess('User berhasil ditambahkan.', [
-            'user' => $this->transformUserRow($created),
-        ], 201);
+        return $this->apiSuccess(
+            'User berhasil ditambahkan.',
+            $this->transformUserRow($created),
+            201
+        );
     }
 
-    public function update(Request $request, Authentication $user)
+    public function update(Request $request, User $user)
     {
         $request->merge([
             'display_name' => $request->input('display_name', $request->input('displayName')),
@@ -162,43 +165,34 @@ class AdminController extends Controller
             'password' => ['nullable', 'string', 'min:8'],
             'email' => [
                 'required', 'string', 'email', 'max:100',
-                Rule::unique('auths', 'email')->ignore($user->id),
+                Rule::unique('users', 'email')->ignore($user->id),
             ],
             'is_admin' => ['required', 'integer', 'in:0,1'],
         ]);
 
-        $password = null;
-        if (array_key_exists('password', $validated) && ! is_null($validated['password'])) {
-            $password = Hash::make($validated['password']);
-        }
-
-        DB::transaction(function () use ($user, $validated, $password) {
+        DB::transaction(function () use ($user, $validated) {
             $payload = [
                 'email' => $validated['email'],
+                'display_name' => $validated['display_name'],
                 'is_admin' => $validated['is_admin'],
             ];
 
-            if (! is_null($password)) {
-                $payload['password'] = $password;
+            if (! empty($validated['password'])) {
+                $payload['password'] = Hash::make($validated['password']);
             }
 
             $user->update($payload);
-
-            User::where('auth_id', $user->id)->update([
-                'display_name' => $validated['display_name'],
-            ]);
         });
 
-        $updated = $this->baseUsersQuery()
-            ->where('auths.id', $user->id)
-            ->firstOrFail();
+        $updated = $user->fresh();
 
-        return $this->apiSuccess('User berhasil diupdate.', [
-            'user' => $this->transformUserRow($updated),
-        ]);
+        return $this->apiSuccess(
+            'User berhasil diupdate.',
+            $this->transformUserRow($updated)
+        );
     }
 
-    public function destroy(Authentication $user)
+    public function destroy(User $user)
     {
         $user->delete();
 

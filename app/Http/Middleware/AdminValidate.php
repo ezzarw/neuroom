@@ -18,29 +18,19 @@ class AdminValidate
         $auth = $request->user();
 
         if ($auth === null) {
-            if ($request->expectsJson()) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Unauthenticated.',
-                    'errors' => (object) [],
-                    'meta' => (object) [],
-                ], 401);
-            }
-
-            return redirect('/');
+            return response()->json([
+                'success' => false,
+                'reason' => 'Unauthenticated.',
+                'errors' => (object) [],
+            ], 401);
         }
 
         if ((int) $auth->is_admin !== 1) {
-            if ($request->expectsJson()) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Forbidden.',
-                    'errors' => (object) [],
-                    'meta' => (object) [],
-                ], 403);
-            }
-
-            abort(403, 'Forbidden');
+            return response()->json([
+                'success' => false,
+                'reason' => 'Forbidden.',
+                'errors' => (object) [],
+            ], 403);
         }
 
         return $next($request);
