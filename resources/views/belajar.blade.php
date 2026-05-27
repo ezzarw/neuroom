@@ -57,6 +57,32 @@
             <div class="summary-output" id="summary-output"></div>
         </div>
 
+        <!-- HASIL -->
+<div class="summary-result" id="summary-result" style="display:none;">
+    <p><strong>Status:</strong> <span id="summary-status">-</span></p>
+    <p id="summary-message">-</p>
+
+    <div class="summary-output" id="summary-output"></div>
+
+    <!-- 🔥 TAMBAHAN ACTION BUTTON -->
+    <div class="summary-actions">
+        <button type="button" id="cancelSummaryBtn" class="btn-cancel">
+            Batal
+        </button>
+
+        <button type="button" id="saveSummaryBtn" class="btn-save">
+            Simpan ke Catatan
+        </button>
+    </div>
+</div>
+
+
+
+
+
+
+
+
     </div>
     <h1 class="headline">Pilih Quiz sesuai kebutuhanmu</h1>
     <!-- CARD -->

@@ -3,6 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+
     <title>Catatan — Neuroom</title>
 
     <!-- CSS -->
@@ -23,59 +25,19 @@
 
     <!-- SEARCH -->
     <div class="notes-header">
-    <div class="search-box">
-        <i class="fa-solid fa-magnifying-glass"></i>
-        <input type="text" id="searchInput" placeholder="Cari catatan...">
+        <div class="search-box">
+            <i class="fa-solid fa-magnifying-glass"></i>
+            <input type="text" id="searchInput" placeholder="Cari catatan...">
+        </div>
     </div>
-</div>
 
     <!-- NOTES -->
-    <div class="notes-grid">
+    <div class="notes-grid" id="notesGrid">
 
-        @forelse($notes ?? [] as $note)
-        <div class="note-card" data-title="{{ strtolower($note->title) }}">
-            <h3>{{ $note->title }}</h3>
-
-            <p>
-                {{ Str::limit(strip_tags($note->content), 100) }}
-            </p>
-
-            <div class="note-meta">
-                {{ date('d M Y', strtotime($note->created_at)) }}
-            </div>
-
-            <div class="note-actions">
-
-                <!-- VIEW -->
-                <button class="open-view"
-                    data-title="{{ $note->title }}"
-                    data-content="{{ $note->content }}">
-                    <i class="fa-solid fa-eye"></i>
-                </button>
-
-                <!-- EDIT -->
-                <button class="open-edit"
-                    data-title="{{ $note->title }}"
-                    data-content="{{ $note->content }}">
-                    <i class="fa-solid fa-pen"></i>
-                </button>
-
-                <!-- DELETE -->
-                <button class="btn-delete"
-                    data-id="{{ $note->id }}">
-                    <i class="fa-solid fa-trash"></i>
-                </button>
-
-            </div>
+        <!-- LOADING -->
+        <div class="empty-state" id="loadingState">
+            <h3>Memuat catatan...</h3>
         </div>
-
-        @empty
-        <div class="empty-state">
-            <h3>Belum ada catatan</h3>
-            <p>Mulai belajar dan buat catatan pertamamu 🚀</p>
-            <a href="/belajar" class="btn-primary">Mulai Belajar</a>
-        </div>
-        @endforelse
 
     </div>
 
@@ -121,8 +83,149 @@
     </div>
 </div>
 
+<!-- API -->
+<script src="{{ asset('js/stateful-api.js') }}"></script>
+
 <!-- JS -->
 <script src="{{ asset('js/catatan.js') }}"></script>
+
+<script>
+
+// =========================
+// LOAD NOTES API
+// =========================
+
+async function loadNotes() {
+
+    try {
+
+        const response = await window.NeuroomApi.request(
+            '/api/v1/notes'
+        );
+
+        const notesGrid = document.getElementById('notesGrid');
+
+        notesGrid.innerHTML = '';
+
+        // EMPTY STATE
+        if (!response.notes || response.notes.length === 0) {
+
+            notesGrid.innerHTML = `
+                <div class="empty-state">
+                    <h3>Belum ada catatan</h3>
+                    <p>Mulai belajar dan buat catatan pertamamu 🚀</p>
+                    <a href="/belajar" class="btn-primary">
+                        Mulai Belajar
+                    </a>
+                </div>
+            `;
+
+            return;
+        }
+
+        // RENDER NOTES
+        response.notes.forEach(note => {
+
+            notesGrid.innerHTML += `
+                <div class="note-card"
+                     data-title="${note.title.toLowerCase()}">
+
+                    <h3>${note.title}</h3>
+
+                    <p>
+                        ${stripHtml(note.content).slice(0, 100)}...
+                    </p>
+
+                    <div class="note-meta">
+                        ${formatDate(note.created_at)}
+                    </div>
+
+                    <div class="note-actions">
+
+                        <!-- VIEW -->
+                        <button class="open-view"
+                            data-title="${escapeHtml(note.title)}"
+                            data-content="${escapeHtml(note.content)}">
+
+                            <i class="fa-solid fa-eye"></i>
+                        </button>
+
+                        <!-- EDIT -->
+                        <button class="open-edit"
+                            data-id="${note.id}"
+                            data-title="${escapeHtml(note.title)}"
+                            data-content="${escapeHtml(note.content)}">
+
+                            <i class="fa-solid fa-pen"></i>
+                        </button>
+
+                        <!-- DELETE -->
+                        <button class="btn-delete"
+                            data-id="${note.id}">
+
+                            <i class="fa-solid fa-trash"></i>
+                        </button>
+
+                    </div>
+                </div>
+            `;
+        });
+
+    } catch (error) {
+
+        console.error('Load notes error:', error);
+
+        document.getElementById('notesGrid').innerHTML = `
+            <div class="empty-state">
+                <h3>Gagal memuat catatan</h3>
+                <p>Coba refresh halaman.</p>
+            </div>
+        `;
+    }
+}
+
+
+// =========================
+// HELPERS
+// =========================
+
+function stripHtml(html) {
+
+    const div = document.createElement('div');
+
+    div.innerHTML = html;
+
+    return div.textContent || div.innerText || '';
+}
+
+function escapeHtml(text) {
+
+    const div = document.createElement('div');
+
+    div.textContent = text;
+
+    return div.innerHTML;
+}
+
+function formatDate(dateString) {
+
+    const date = new Date(dateString);
+
+    return date.toLocaleDateString('id-ID', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric'
+    });
+}
+
+
+// =========================
+// INIT
+// =========================
+
+loadNotes();
+
+</script>
 
 </body>
 </html>

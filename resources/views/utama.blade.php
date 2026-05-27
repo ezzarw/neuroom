@@ -4,6 +4,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+
     <title>Neuroom — Dashboard</title>
 
     <link rel="stylesheet" href="{{ asset('css/style.css') }}">
@@ -36,7 +38,9 @@
             <div class="welcome-left">
                 <h1>
                     Selamat datang kembali,
-                    <strong>{{ auth()->user()->username }}</strong>
+                    <strong id="username">
+                        {{ auth()->user()->username }}
+                    </strong>
                 </h1>
 
                 <p>
@@ -47,17 +51,17 @@
 
                     <div class="stat">
                         <span>Total Materi</span>
-                        <strong>12</strong>
+                        <strong id="total-materi">12</strong>
                     </div>
 
                     <div class="stat">
                         <span>Quiz Selesai</span>
-                        <strong>7</strong>
+                        <strong id="quiz-selesai">7</strong>
                     </div>
 
                     <div class="stat">
                         <span>Catatan</span>
-                        <strong>15</strong>
+                        <strong id="total-catatan">15</strong>
                     </div>
 
                 </div>
@@ -115,10 +119,9 @@
                 <a href="/history">Lihat Semua</a>
             </div>
 
-            <div class="list">
+            <div class="list" id="activity-list">
 
-                {{-- nanti backend tinggal looping --}}
-
+                {{-- fallback awal --}}
                 @forelse ($activities ?? [] as $activity)
 
                     <div class="item">
@@ -149,7 +152,15 @@
     </div>
 </section>
 
+<!-- API -->
+<script src="{{ asset('js/stateful-api.js') }}"></script>
+
 <script>
+
+// ======================
+// TOAST LOGIN
+// ======================
+
 const params = new URLSearchParams(window.location.search);
 const toast = document.getElementById('loginToast');
 
@@ -172,6 +183,75 @@ document
     .addEventListener('click', () => {
         toast.classList.remove('show');
     });
+
+
+// ======================
+// DASHBOARD API
+// ======================
+
+async function loadDashboard() {
+
+    try {
+
+        const response = await window.NeuroomApi.request(
+            '/api/v1/dashboard'
+        );
+
+        // USERNAME
+        if (response.user) {
+            document.getElementById('username').textContent =
+                response.user.username;
+        }
+
+        // STATS
+        if (response.stats) {
+
+            document.getElementById('total-materi').textContent =
+                response.stats.total_materi ?? 0;
+
+            document.getElementById('quiz-selesai').textContent =
+                response.stats.quiz_selesai ?? 0;
+
+            document.getElementById('total-catatan').textContent =
+                response.stats.total_catatan ?? 0;
+        }
+
+        // ACTIVITIES
+        const activityList = document.getElementById('activity-list');
+
+        if (response.activities?.length > 0) {
+
+            activityList.innerHTML = '';
+
+            response.activities.forEach(activity => {
+
+                activityList.innerHTML += `
+                    <div class="item">
+
+                        <div class="activity-info">
+                            <strong>${activity.title}</strong>
+                            <span>${activity.time}</span>
+                        </div>
+
+                        <span class="badge">
+                            ${activity.status}
+                        </span>
+
+                    </div>
+                `;
+            });
+
+        }
+
+    } catch (error) {
+
+        console.error('Dashboard API Error:', error);
+
+    }
+}
+
+loadDashboard();
+
 </script>
 
 </body>

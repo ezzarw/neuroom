@@ -85,3 +85,52 @@ form?.addEventListener('submit', async (event) => {
     loadingBox.style.display = 'none';
   }
 });
+
+const cancelBtn = document.getElementById("cancelSummaryBtn");
+const saveBtn = document.getElementById("saveSummaryBtn");
+
+const summaryResult = document.getElementById("summary-result");
+const summaryOutput = document.getElementById("summary-output");
+
+// 🔴 BATAL
+cancelBtn?.addEventListener("click", () => {
+    summaryResult.style.display = "none";
+    summaryOutput.innerHTML = "";
+});
+
+// 🟢 SIMPAN KE CATATAN
+saveBtn?.addEventListener("click", async () => {
+    const content = summaryOutput.innerText;
+
+    if (!content) {
+        alert("Tidak ada isi untuk disimpan");
+        return;
+    }
+
+    try {
+        const response = await fetch("/api/catatan", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "X-CSRF-TOKEN": document.querySelector('meta[name="csrf-token"]').content
+            },
+            body: JSON.stringify({
+                judul: "Ringkasan AI",
+                isi: content
+            })
+        });
+
+        const result = await response.json();
+
+        if (response.ok) {
+            alert("Berhasil disimpan ke catatan");
+            window.location.href = "/catatan";
+        } else {
+            alert(result.message || "Gagal menyimpan");
+        }
+
+    } catch (error) {
+        console.error(error);
+        alert("Terjadi kesalahan server");
+    }
+});
