@@ -7,9 +7,21 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Redis;
 
 class AuthController extends Controller
 {
+    protected function statefulSessionGuard(): string
+    {
+        $guards = config('sanctum.guard', []);
+
+        if (is_array($guards) && isset($guards[0]) && is_string($guards[0])) {
+            return $guards[0];
+        }
+
+        return (string) config('auth.defaults.guard');
+    }
+
     protected function transformAuthenticatedUser(User $auth): array
     {
         $profilePicture = $auth->profile_picture;
@@ -45,7 +57,7 @@ class AuthController extends Controller
                 'profile_picture' => null,
             ]);
 
-        Auth::guard('web')->login($auth);
+        Auth::guard($this->statefulSessionGuard())->login($auth);
         $request->session()->regenerate();
 
         return $this->apiSuccess(
@@ -80,7 +92,7 @@ class AuthController extends Controller
             );
         }
 
-        Auth::guard('web')->login($auth);
+        Auth::guard($this->statefulSessionGuard())->login($auth);
         $request->session()->regenerate();
 
         return $this->apiSuccess(
@@ -91,7 +103,27 @@ class AuthController extends Controller
 
     public function logout(Request $request)
     {
-        Auth::guard('web')->logout();
+        $user_id = Auth::id();
+        $redis_keys = Redis::keys("user:$user_id:*");
+        
+        
+        
+        if (!empty($redis_keys)) {
+            $redis_keys_parsed = [];
+            foreach ($redis_keys as $perkey) {
+                $arr_temporary = explode(':', $perkey); //pokok e koyok ngene ngkok ['laravel-database-user', '1', 'summary']
+                $arr_temporary[0] = 'user';
+                $arr_to_str = implode(':', $arr_temporary);
+                // dd($arr_to_str);
+                
+                $redis_keys_parsed[] = $arr_to_str;
+            }
+
+
+            Redis::del($redis_keys_parsed);
+        }
+        
+        Auth::guard($this->statefulSessionGuard())->logout();
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 

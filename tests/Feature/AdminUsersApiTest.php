@@ -2,35 +2,31 @@
 
 namespace Tests\Feature;
 
-use App\Models\Auth;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
 class AdminUsersApiTest extends TestCase
 {
     use RefreshDatabase;
 
-    protected function createAdmin(): Auth
+    protected function createAdmin(): User
     {
-        $admin = Auth::create([
+        return User::create([
             'username' => 'admin',
+            'display_name' => 'Administrator',
             'email' => 'admin@example.com',
             'password' => password_hash('password123', PASSWORD_BCRYPT),
             'is_admin' => 1,
-        ]);
-
-        $admin->user()->create([
-            'display_name' => 'Administrator',
             'profile_picture' => null,
         ]);
-
-        return $admin;
     }
 
     public function test_admin_can_crud_users_via_api(): void
     {
         $admin = $this->createAdmin();
-        $this->actingAs($admin, 'web');
+        Sanctum::actingAs($admin);
 
         $create = $this->postJson('/api/v1/admin/users', [
             'username' => 'member baru',
@@ -40,14 +36,14 @@ class AdminUsersApiTest extends TestCase
 
         $create->assertCreated()
             ->assertJsonPath('success', true)
-            ->assertJsonPath('data.user.email', 'member@example.com');
+            ->assertJsonPath('data.email', 'member@example.com');
 
-        $userId = $create->json('data.user.id');
+        $userId = $create->json('data.id');
 
         $index = $this->getJson('/api/v1/admin/users');
         $index->assertOk()
             ->assertJsonPath('success', true)
-            ->assertJsonCount(2, 'data.users');
+            ->assertJsonCount(2, 'data');
 
         $update = $this->putJson("/api/v1/admin/users/{$userId}", [
             'display_name' => 'Member Update',
@@ -57,14 +53,14 @@ class AdminUsersApiTest extends TestCase
 
         $update->assertOk()
             ->assertJsonPath('success', true)
-            ->assertJsonPath('data.user.display_name', 'Member Update')
-            ->assertJsonPath('data.user.email', 'member-update@example.com');
+            ->assertJsonPath('data.display_name', 'Member Update')
+            ->assertJsonPath('data.email', 'member-update@example.com');
 
         $delete = $this->deleteJson("/api/v1/admin/users/{$userId}");
         $delete->assertOk()
             ->assertJsonPath('success', true);
 
-        $this->assertDatabaseMissing('auths', [
+        $this->assertDatabaseMissing('users', [
             'id' => $userId,
         ]);
     }

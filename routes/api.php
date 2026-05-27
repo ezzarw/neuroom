@@ -20,7 +20,9 @@ Route::prefix('v1')->group(function () {
     });
 
     Route::middleware('auth:sanctum')->group(function () {
-        Route::post('/summary', [SummaryController::class, 'summary']);
+        Route::post('/summary', [SummaryController::class, 'store']);
+        Route::post('/summary-to-notes', [SummaryController::class, 'addToNotes']);
+        
         Route::get('/pomodoro/history', [PomodoroController::class, 'history']);
         Route::post('/pomodoro/history', [PomodoroController::class, 'store']);
         

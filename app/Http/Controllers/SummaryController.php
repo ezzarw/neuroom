@@ -2,56 +2,26 @@
 
 namespace App\Http\Controllers;
 
-use DateTime;
-use Illuminate\Http\Request;
+use App\Http\Requests\StoreSummaryRequest;
+use App\Models\Note;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Redis;
 
 class SummaryController extends Controller
 {
-    public function summary(Request $request)
+    public function store(StoreSummaryRequest $request)
     {
-        $request->validate([
-            'document' => 'required|file|mimes:pdf,ppt,pptx,doc,docx,xls,xlsx,txt,csv,rtf,odt,ods,odp|max:20480',
-            'bahasa' => 'required|string|in:indonesia,english',
-        ]);
 
         $document = $request->file('document');
         $bahasa = $request->string('bahasa')->toString();
-
-        $dt = new DateTime;
-        $formatted_date = str_replace([' ', ':', '.', '-'], ['_', '', '', ''], $dt->format('Y-m-d H:i:s.u'));
-        $sanitized_name = uniqid().'_'.$formatted_date.'.'.$document->getClientOriginalExtension();
-        $stored_path = $document->storeAs('document_for_summaries', $sanitized_name, 'local');
-
-        if ($stored_path === false) {
-            return $this->apiError('Gagal menyimpan dokumen.', 500);
-        }
 
         $instruction = $bahasa === 'english'
             ? 'Summarize the uploaded document into concise bullet points. Do not start with phrases like "This document". Go straight to the main ideas and use English. Answer with MarkDown format'
             : 'Buat ringkasan dokumen yang diunggah dalam poin-poin singkat. Jangan mulai dengan kalimat seperti "Dokumen ini". Langsung ke inti topik dan gunakan bahasa Indonesia. jawab dengan format markdown';
 
         $api_key = env('GEMINI_API_KEY');
-
-        if ($api_key === null || $api_key === '') {
-            return $this->apiSuccess(
-                'Dokumen berhasil diupload, tetapi integrasi AI belum dikonfigurasi.',
-                [
-                    'summary' => [
-                        'status' => 'fallback',
-                        'output' => [
-                            'Nama file: '.$document->getClientOriginalName(),
-                            'Bahasa ringkasan: '.$bahasa,
-                            'Ukuran file: '.$document->getSize().' byte',
-                        ],
-                    ],
-                ],
-                200,
-                [
-                    'fallback' => true,
-                ]
-            );
-        }
+        $model = env('GEMINI_MODEL');
 
         $mimeType = $document->getMimeType() ?: 'application/octet-stream';
         $base64Document = base64_encode(file_get_contents($document->getRealPath()));
@@ -59,7 +29,7 @@ class SummaryController extends Controller
         $response = Http::timeout(90)->withHeaders([
             'Accept' => 'application/json',
             'x-goog-api-key' => $api_key,
-        ])->post('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent', [
+        ])->post("https://generativelanguage.googleapis.com/v1beta/models/{$model}:generateContent", [
             'contents' => [
                 [
                     'role' => 'user',
@@ -94,22 +64,52 @@ class SummaryController extends Controller
             return $this->apiError('Respons AI tidak valid.', 502);
         }
 
-        $output = collect(preg_split('/\r?\n/', trim($text)))
-            ->map(fn (?string $line) => trim((string) $line))
-            ->filter()
-            ->values()
-            ->all();
-
+        $output = $data['candidates'][0]['content']['parts'][0]['text'];
+        $user_id = Auth::id();
+        Redis::set("user:$user_id:summary", $output);
+        
+        
         return $this->apiSuccess('Ringkasan berhasil dibuat.', [
-            'summary' => [
-                'status' => 'success',
-                'output' => $output,
-                'document' => [
-                    'name' => $document->getClientOriginalName(),
-                    'path' => $stored_path,
-                    'mime_type' => $mimeType,
-                ],
+            'status' => 'success',
+            'output' => $output,
+            'document' => [
+                'name' => $document->getClientOriginalName(),
+                'mime_type' => $mimeType,
             ],
-        ]);
+        ], 201);
+    }
+
+    public function addToNotes()
+    {
+        $user_id = Auth::id();
+        $summary_result = Redis::get("user:$user_id:summary");
+
+        if (empty($summary_result) || $summary_result == false) {
+            return $this->apiError('Hasil rangkuman tidak ditemukan, mungkin sudah terunggah ke catatan, atau belum membuat rangkuman', 404);
+        } 
+
+        $payload = [
+            'user_id' => Auth::id(),
+            'title' => 'Catatan dari Rangkuman',
+            'content' => $summary_result
+        ];
+        $note = Note::query()->create($payload);
+        dd($note);
+        $payload = [
+            'id' => $note->id,
+            'user_id' => $note->user_id,
+            'title' => $note->title,
+            'content' => $note->content,
+            'created_at' => $note->created_at,
+            'updated_at' => $note->updated_at
+
+        ];
+        // delete hasil rangkuman terbaru (soalnya udah terupload agar data tidak double)
+        Redis::del("user:$user_id:summary");
+
+
+        return $this->apiSuccess('Rangkuman berhasil diupload ke catatan.', 
+            $payload
+        , 201);
     }
 }
