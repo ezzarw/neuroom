@@ -19,8 +19,13 @@ class AdminController extends Controller
             ->select([
                 'id',
                 'user_id',
-                'session',
+                'pomodoro_uid',
+                'status',
                 'duration_seconds',
+                'actual_seconds',
+                'started_at',
+                'finished_at',
+                'stopped_at',
                 'created_at',
                 'updated_at',
             ])
@@ -48,10 +53,13 @@ class AdminController extends Controller
         return [
             'id' => $session->id,
             'username' => $session->user?->username,
-            'session' => $session->session,
-            'date' => $session->created_at?->toDateString(),
+            'pomodoro_uid' => $session->pomodoro_uid,
+            'status' => $session->status,
             'duration_seconds' => (int) ($session->duration_seconds ?? 0),
-            'duration' => $this->formatDuration((int) ($session->duration_seconds ?? 0)),
+            'actual_seconds' => (int) ($session->actual_seconds ?? 0),
+            'started_at' => $this->formatDateTime($session->started_at),
+            'finished_at' => $this->formatDateTime($session->finished_at),
+            'stopped_at' => $this->formatDateTime($session->stopped_at),
             'created_at' => $this->formatDateTime($session->created_at),
             'updated_at' => $this->formatDateTime($session->updated_at),
         ];

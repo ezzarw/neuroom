@@ -10,6 +10,22 @@ use Illuminate\Support\Str;
 
 class PomodoroService
 {
+    public function history(object $user): array
+    {
+        $records = PomodoroHistory::where('user_id', $user->id)
+            ->latest()
+            ->limit(50)
+            ->get()
+            ->toArray();
+
+        return [
+            'status' => 'history',
+            'records' => $records,
+            'total' => count($records),
+            'server_now' => now()->toISOString(),
+        ];
+    }
+
     private function saveFocusHistory(
         object $user,
         array $state,
@@ -311,6 +327,13 @@ class PomodoroService
         }
 
         return $payload;
+    }
+
+    public function show(object $user)
+    {
+        $pomodoro = PomodoroHistory::query()->where('user_id', $user->id)->get();
+
+        return $pomodoro;
     }
 
     private function startNewSession(

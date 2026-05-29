@@ -914,56 +914,340 @@ Semua endpoint pomodoro butuh login:
 auth:sanctum
 ```
 
-### Simpan Riwayat Pomodoro
+### Cara Kerja
 
-Menyimpan satu sesi Pomodoro yang sudah selesai.
+Pomodoro menyimpan state session aktif di Redis dengan key `user:{id}:pomodoro:current`. State berisi ID session, tipe (focus/short_break/long_break), status (running/paused), durasi, sisa waktu, dan timestamp.
+
+Timer dihitung dari field `ends_at` — client bisa menghitung `remaining = ends_at - server_now`. Redis TTL dipakai sebagai safety net, bukan sebagai mekanisme timer.
+
+Saat session selesai (natural) atau dihentikan (manual), data disimpan ke tabel `pomodoro_histories` di MySQL.
+
+Field umum di response:
+
+| Field | Tipe | Arti |
+|---|---|---|
+| `id` | string (UUID) | ID unik session |
+| `type` | string | `focus`, `short_break`, atau `long_break` |
+| `status` | string | `running`, `paused`, `stopped`, `finished`, atau `idle` |
+| `duration` | integer | Total durasi session dalam detik |
+| `remaining` | integer | Sisa waktu dalam detik |
+| `started_at` | string (ISO 8601) | Waktu session dimulai |
+| `ends_at` | string (ISO 8601) atau null | Waktu session akan berakhir |
+| `server_now` | string (ISO 8601) | Waktu server saat ini |
+
+---
+
+### Cek State Saat Ini
 
 ```http
-POST /api/v1/pomodoro/history
+GET /api/v1/pomodoro/current
 ```
 
-Body JSON:
-
-```json
-{
-  "duration_seconds": 1500
-}
-```
-
-Validasi:
-
-| Field | Wajib | Aturan |
-| --- | --- | --- |
-| `duration_seconds` | Ya | integer, minimal 1 |
-
-Catatan:
-
-- `session` dihitung otomatis per hari.
-- Kalau hari ini user belum punya sesi, sesi pertama bernilai `1`.
-- Kalau sudah punya 2 sesi hari ini, sesi berikutnya bernilai `3`.
-
-Response sukses `201`:
+Response sukses `200` saat ada session aktif:
 
 ```json
 {
   "success": true,
-  "reason": "Data pomodoro berhasil ditambahkan.",
+  "reason": "Pomodoro berjalan.",
   "data": {
-    "id": 1,
-    "session": 1,
-    "date": "2026-05-27",
-    "duration_seconds": 1500,
-    "duration": "00:25:00",
-    "created_at": "2026-05-27 10:00:00"
+    "id": "550e8400-e29b-41d4-a716-446655440000",
+    "type": "focus",
+    "status": "running",
+    "duration": 1500,
+    "remaining": 1200,
+    "focus_duration": 1500,
+    "short_break_duration": 300,
+    "long_break_duration": 900,
+    "auto_start_break": true,
+    "auto_start_focus": false,
+    "started_at": "2026-05-29T10:00:00.000000Z",
+    "ends_at": "2026-05-29T10:25:00.000000Z",
+    "server_now": "2026-05-29T10:05:00.000000Z"
+  }
+}
+```
+
+Response `200` saat tidak ada session (idle):
+
+```json
+{
+  "success": true,
+  "reason": "Tidak ada pomodoro aktif.",
+  "data": {
+    "status": "idle",
+    "server_now": "2026-05-29T10:00:00.000000Z"
   }
 }
 ```
 
 ---
 
-### Ambil Riwayat Pomodoro
+### Mulai Fokus
 
-Mengambil 20 riwayat Pomodoro terbaru milik user login.
+Memulai sesi fokus baru. Gagal kalau masih ada session aktif.
+
+```http
+POST /api/v1/pomodoro/start
+```
+
+Body JSON:
+
+```json
+{
+  "duration": 1500,
+  "auto_start_break": true,
+  "auto_start_focus": false
+}
+```
+
+| Field | Wajib | Default | Aturan |
+|---|---|---|---|
+| `duration` | Tidak | 1500 | integer, durasi dalam detik |
+| `auto_start_break` | Tidak | true | boolean, auto-start break setelah fokus selesai |
+| `auto_start_focus` | Tidak | false | boolean, auto-start fokus setelah break selesai |
+
+Response sukses `200`:
+
+```json
+{
+  "success": true,
+  "reason": "Pomodoro berjalan.",
+  "data": {
+    "id": "550e8400-e29b-41d4-a716-446655440000",
+    "type": "focus",
+    "status": "running",
+    "duration": 1500,
+    "remaining": 1500,
+    "focus_duration": 1500,
+    "short_break_duration": 300,
+    "long_break_duration": 900,
+    "auto_start_break": true,
+    "auto_start_focus": false,
+    "started_at": "2026-05-29T10:00:00.000000Z",
+    "ends_at": "2026-05-29T10:25:00.000000Z",
+    "server_now": "2026-05-29T10:00:00.000000Z"
+  }
+}
+```
+
+Response `200` saat masih ada session aktif:
+
+```json
+{
+  "success": true,
+  "reason": "Masih ada pomodoro aktif.",
+  "data": {
+    "id": "550e8400-e29b-41d4-a716-446655440000",
+    "type": "focus",
+    "status": "running",
+    "duration": 1500,
+    "remaining": 1200,
+    "server_now": "2026-05-29T10:05:00.000000Z"
+  }
+}
+```
+
+---
+
+### Mulai Istirahat
+
+Memulai sesi istirahat (short break). Sama seperti start, tapi `type` otomatis `short_break`.
+
+```http
+POST /api/v1/pomodoro/break/start
+```
+
+Body JSON:
+
+```json
+{
+  "duration": 300,
+  "auto_start_break": true,
+  "auto_start_focus": false
+}
+```
+
+| Field | Wajib | Default | Aturan |
+|---|---|---|---|
+| `duration` | Tidak | 300 | integer, durasi dalam detik |
+| `auto_start_break` | Tidak | true | boolean |
+| `auto_start_focus` | Tidak | false | boolean |
+
+Response sukses `200` — sama seperti start dengan `type: "short_break"`.
+
+---
+
+### Jeda
+
+Menjeda session yang sedang running. Menyimpan sisa waktu (`remaining`) ke state.
+
+```http
+POST /api/v1/pomodoro/pause
+```
+
+Body: Tidak perlu.
+
+Response sukses `200`:
+
+```json
+{
+  "success": true,
+  "reason": "Pomodoro dijeda.",
+  "data": {
+    "id": "550e8400-e29b-41d4-a716-446655440000",
+    "type": "focus",
+    "status": "paused",
+    "duration": 1500,
+    "remaining": 1200,
+    "paused_at": "2026-05-29T10:05:00.000000Z",
+    "server_now": "2026-05-29T10:05:00.000000Z"
+  }
+}
+```
+
+Response `200` saat tidak ada session aktif — mengembalikan idle payload.
+
+---
+
+### Lanjutkan
+
+Melanjutkan session yang sedang paused.
+
+```http
+POST /api/v1/pomodoro/resume
+```
+
+Body: Tidak perlu.
+
+Response sukses `200`:
+
+```json
+{
+  "success": true,
+  "reason": "Pomodoro berjalan.",
+  "data": {
+    "id": "550e8400-e29b-41d4-a716-446655440000",
+    "type": "focus",
+    "status": "running",
+    "duration": 1500,
+    "remaining": 1200,
+    "resumed_at": "2026-05-29T10:10:00.000000Z",
+    "ends_at": "2026-05-29T10:30:00.000000Z",
+    "server_now": "2026-05-29T10:10:00.000000Z"
+  }
+}
+```
+
+Catatan: `ends_at` dihitung ulang dari `remaining` + waktu resume.
+
+Jika `remaining <= 0` saat resume, otomatis memanggil finish (session dianggap selesai).
+
+---
+
+### Hentikan (Early Stop)
+
+Menghentikan session sebelum waktunya. Menyimpan history dengan status `stopped`. Field `actual_seconds` berisi durasi yang sudah dijalani (`duration - remaining`).
+
+```http
+POST /api/v1/pomodoro/stop
+```
+
+Body: Tidak perlu.
+
+Response sukses `200`:
+
+```json
+{
+  "success": true,
+  "reason": "Pomodoro dihentikan.",
+  "data": {
+    "id": "550e8400-e29b-41d4-a716-446655440000",
+    "type": "focus",
+    "status": "stopped",
+    "duration": 1500,
+    "remaining": 1200,
+    "actual_seconds": 300,
+    "stopped_at": "2026-05-29T10:05:00.000000Z",
+    "server_now": "2026-05-29T10:05:00.000000Z"
+  }
+}
+```
+
+---
+
+### Selesaikan (Natural Complete)
+
+Menandai session yang sudah mencapai `ends_at` sebagai selesai. Hanya valid jika `server_now >= ends_at`. Menyimpan history dengan status `finished`.
+
+Setelah selesai, secara otomatis akan memulai sesi berikutnya jika `auto_start_break` atau `auto_start_focus` aktif.
+
+```http
+POST /api/v1/pomodoro/finish
+```
+
+Body: Tidak perlu.
+
+Response sukses `200` (tanpa auto-start, atau auto-start gagal karena masih ada session):
+
+```json
+{
+  "success": true,
+  "reason": "Pomodoro selesai.",
+  "data": {
+    "id": "550e8400-e29b-41d4-a716-446655440000",
+    "type": "focus",
+    "status": "finished",
+    "duration": 1500,
+    "remaining": 0,
+    "actual_seconds": 1500,
+    "finished_at": "2026-05-29T10:25:00.000000Z",
+    "next_type": "short_break",
+    "next_duration": 300,
+    "next_action": "auto_start_break",
+    "server_now": "2026-05-29T10:25:00.000000Z"
+  }
+}
+```
+
+Response `200` saat auto-start break berhasil (session baru langsung dibuat):
+
+```json
+{
+  "success": true,
+  "reason": "Pomodoro berjalan.",
+  "data": {
+    "id": "660e8400-e29b-41d4-a716-446655440001",
+    "type": "short_break",
+    "status": "running",
+    "duration": 300,
+    "remaining": 300,
+    "started_at": "2026-05-29T10:25:00.000000Z",
+    "ends_at": "2026-05-29T10:30:00.000000Z",
+    "server_now": "2026-05-29T10:25:00.000000Z"
+  }
+}
+```
+
+Response `200` saat session belum selesai:
+
+```json
+{
+  "success": true,
+  "reason": "Pomodoro belum selesai.",
+  "data": {
+    "id": "550e8400-e29b-41d4-a716-446655440000",
+    "type": "focus",
+    "status": "running",
+    "server_now": "2026-05-29T10:10:00.000000Z"
+  }
+}
+```
+
+---
+
+### Riwayat Pomodoro
+
+Mengambil 50 riwayat pomodoro terbaru milik user login.
 
 ```http
 GET /api/v1/pomodoro/history
@@ -975,16 +1259,51 @@ Response sukses `200`:
 {
   "success": true,
   "reason": "Riwayat pomodoro berhasil diambil.",
-  "data": [
-    {
-      "id": 1,
-      "session": 1,
-      "date": "2026-05-27",
-      "duration_seconds": 1500,
-      "duration": "00:25:00",
-      "created_at": "2026-05-27 10:00:00"
-    }
-  ]
+  "data": {
+    "records": [
+      {
+        "id": 1,
+        "user_id": 1,
+        "pomodoro_uid": "550e8400-e29b-41d4-a716-446655440000",
+        "status": "finished",
+        "duration_seconds": 1500,
+        "actual_seconds": 1500,
+        "remaining_seconds": 0,
+        "started_at": "2026-05-29T10:00:00.000000Z",
+        "finished_at": "2026-05-29T10:25:00.000000Z",
+        "stopped_at": null,
+        "created_at": "2026-05-29T10:25:00.000000Z",
+        "updated_at": "2026-05-29T10:25:00.000000Z"
+      }
+    ],
+    "total": 1
+  }
+}
+```
+
+---
+
+### Broadcast Event (WebSocket)
+
+Semua perubahan state pomodoro (start, pause, resume, stop, finish) memicu broadcast event `pomodoro.state.changed` di private channel:
+
+```text
+user.{userId}.pomodoro
+```
+
+Client bisa subscribe untuk menerima update real-time tanpa polling.
+
+Payload event adalah data di dalam field `data` (tanpa wrapper `success`/`reason`). Contoh event saat pause:
+
+```json
+{
+  "id": "550e8400-e29b-41d4-a716-446655440000",
+  "type": "focus",
+  "status": "paused",
+  "duration": 1500,
+  "remaining": 1200,
+  "paused_at": "...",
+  "server_now": "..."
 }
 ```
 
@@ -1034,12 +1353,14 @@ Response sukses `200`:
       {
         "id": 1,
         "username": "budisantoso",
-        "session": 1,
-        "date": "2026-05-27",
+        "pomodoro_uid": "550e8400-e29b-41d4-a716-446655440000",
+        "status": "finished",
         "duration_seconds": 1500,
-        "duration": "00:25:00",
-        "created_at": "2026-05-27 10:00:00",
-        "updated_at": "2026-05-27 10:00:00"
+        "actual_seconds": 1500,
+        "started_at": "2026-05-29T10:00:00.000000Z",
+        "finished_at": "2026-05-29T10:25:00.000000Z",
+        "created_at": "2026-05-29 10:25:00",
+        "updated_at": "2026-05-29 10:25:00"
       }
     ]
   }
@@ -1208,7 +1529,7 @@ Catatan:
 
 ### Data Pomodoro Admin
 
-Mengambil 50 sesi Pomodoro terbaru dari semua user.
+Mengambil 50 sesi Pomodoro terbaru dari semua user. Response memakai format model, bukan raw JSON seperti endpoint user. Field `pomodoro_uid` adalah UUID session, `status` bisa `finished` atau `stopped`.
 
 ```http
 GET /api/v1/admin/pomodoro
@@ -1224,12 +1545,14 @@ Response sukses `200`:
     {
       "id": 1,
       "username": "budisantoso",
-      "session": 1,
-      "date": "2026-05-27",
+      "pomodoro_uid": "550e8400-e29b-41d4-a716-446655440000",
+      "status": "finished",
       "duration_seconds": 1500,
-      "duration": "00:25:00",
-      "created_at": "2026-05-27 10:00:00",
-      "updated_at": "2026-05-27 10:00:00"
+      "actual_seconds": 1500,
+      "started_at": "2026-05-29T10:00:00.000000Z",
+      "finished_at": "2026-05-29T10:25:00.000000Z",
+      "created_at": "2026-05-29 10:25:00",
+      "updated_at": "2026-05-29 10:25:00"
     }
   ]
 }
@@ -1309,21 +1632,23 @@ try {
 
 Bagian ini bukan kontrak ideal, tapi catatan kondisi kode saat dokumentasi ini dibuat.
 
-1. API sudah diarahkan ke Sanctum stateful.
+1. Endpoint pomodoro sudah menggunakan format `{success, reason, data}` dari helper Controller, sama dengan endpoint lain. Frontend membaca field `data.status` untuk menentukan state ("running", "paused", "idle", dll).
+
+2. API sudah diarahkan ke Sanctum stateful.
    - Protected route memakai `auth:sanctum`.
    - Login/logout memakai session guard yang dibaca dari konfigurasi Sanctum.
    - Frontend harus membawa cookie dan CSRF token.
 
-2. `POST /api/v1/summary-to-notes` perlu dicek sebelum dipakai production.
+3. `POST /api/v1/summary-to-notes` perlu dicek sebelum dipakai production.
    - Di `SummaryController::addToNotes()` masih ada `dd($note);`.
    - Selama itu masih ada, endpoint bisa berhenti sebelum mengembalikan response JSON.
 
-3. `docs/API.md` ini mengikuti response helper di `App\Http\Controllers\Controller`.
+4. `docs/API.md` ini mengikuti response helper di `App\Http\Controllers\Controller`.
    - Sukses: `success`, `reason`, `data`.
    - Error: `success`, `reason`, `errors`.
 
-4. Endpoint notes search memakai Laravel Scout.
+5. Endpoint notes search memakai Laravel Scout.
    - Kalau driver Scout belum siap, pencarian `?s=` bisa bergantung pada konfigurasi search di environment.
 
-5. Request upload file harus memakai `multipart/form-data`.
+6. Request upload file harus memakai `multipart/form-data`.
    - Jangan mengirim file sebagai JSON/base64 dari frontend, kecuali backend memang diubah untuk menerima format itu.

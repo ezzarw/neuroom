@@ -26,6 +26,7 @@ Route::prefix('v1')->group(function () {
 
         // pomodoro
         Route::prefix('pomodoro')->group(function () {
+            Route::get('/show', [PomodoroController::class, 'show']);
             Route::get('/current', [PomodoroController::class, 'current']);
             Route::post('/start', [PomodoroController::class, 'start']);
             Route::post('/pause', [PomodoroController::class, 'pause']);
@@ -33,6 +34,7 @@ Route::prefix('v1')->group(function () {
             Route::post('/stop', [PomodoroController::class, 'stop']);
             Route::post('/finish', [PomodoroController::class, 'finish']);
             Route::post('/break/start', [PomodoroController::class, 'startBreak']);
+            Route::get('/history', [PomodoroController::class, 'show']);
         });
 
         Route::get('/notes', [NoteController::class, 'index']);
