@@ -13,6 +13,7 @@ return Application::configure(basePath: dirname(__DIR__))
         web: __DIR__.'/../routes/web.php',
         api: __DIR__.'/../routes/api.php',
         commands: __DIR__.'/../routes/console.php',
+        channels: __DIR__.'/../routes/channels.php',
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
@@ -48,28 +49,28 @@ return Application::configure(basePath: dirname(__DIR__))
             return $jsonError('Silakan login terlebih dahulu.', Response::HTTP_UNAUTHORIZED);
         });
 
-        $exceptions->render(function (\Throwable $exception, $request) use ($wantsJson, $jsonError) {
-            if (! $wantsJson($request)) {
-                return null;
-            }
+        // $exceptions->render(function (\Throwable $exception, $request) use ($wantsJson, $jsonError) {
+        //     if (! $wantsJson($request)) {
+        //         return null;
+        //     }
 
-            $status = $exception instanceof HttpExceptionInterface
-                ? $exception->getStatusCode()
-                : Response::HTTP_INTERNAL_SERVER_ERROR;
+        //     $status = $exception instanceof HttpExceptionInterface
+        //         ? $exception->getStatusCode()
+        //         : Response::HTTP_INTERNAL_SERVER_ERROR;
 
-            $reason = match ($status) {
-                Response::HTTP_BAD_REQUEST => 'Request tidak valid.',
-                Response::HTTP_UNAUTHORIZED => 'Silakan login terlebih dahulu.',
-                Response::HTTP_FORBIDDEN => 'Akses ditolak.',
-                Response::HTTP_NOT_FOUND => 'Data atau endpoint tidak ditemukan.',
-                Response::HTTP_METHOD_NOT_ALLOWED => 'Method request tidak diizinkan.',
-                Response::HTTP_TOO_MANY_REQUESTS => 'Terlalu banyak request. Coba lagi nanti.',
-                Response::HTTP_CONFLICT => 'Request konflik dengan kondisi data saat ini.',
-                default => $status >= 500
-                    ? 'Terjadi kesalahan pada server. ' 
-                    : ($exception->getMessage() !== '' ? $exception->getMessage() : 'Request gagal.'),
-            };
+        //     $reason = match ($status) {
+        //         Response::HTTP_BAD_REQUEST => 'Request tidak valid.',
+        //         Response::HTTP_UNAUTHORIZED => 'Silakan login terlebih dahulu.',
+        //         Response::HTTP_FORBIDDEN => 'Akses ditolak.',
+        //         Response::HTTP_NOT_FOUND => 'Data atau endpoint tidak ditemukan.',
+        //         Response::HTTP_METHOD_NOT_ALLOWED => 'Method request tidak diizinkan.',
+        //         Response::HTTP_TOO_MANY_REQUESTS => 'Terlalu banyak request. Coba lagi nanti.',
+        //         Response::HTTP_CONFLICT => 'Request konflik dengan kondisi data saat ini.',
+        //         default => $status >= 500
+        //             ? 'Terjadi kesalahan pada server. ' 
+        //             : ($exception->getMessage() !== '' ? $exception->getMessage() : 'Request gagal.'),
+        //     };
 
-            return $jsonError($reason, $status);
-        });
+        //     return $jsonError($reason, $status);
+        // });
     })->create();

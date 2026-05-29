@@ -9,10 +9,24 @@ class PomodoroHistory extends Model
 {
     protected $fillable = [
         'user_id',
-        'session',
+        'pomodoro_uid',
+        'status',
         'duration_seconds',
+        'actual_seconds',
+        'remaining_seconds',
+        'started_at',
+        'finished_at',
+        'stopped_at',
     ];
 
+    protected function casts(): array
+    {
+        return [
+            'started_at' => 'datetime',
+            'finished_at' => 'datetime',
+            'stopped_at' => 'datetime',
+        ];
+    }
 
     public function user(): BelongsTo
     {

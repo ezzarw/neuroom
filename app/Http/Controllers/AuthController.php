@@ -111,10 +111,9 @@ class AuthController extends Controller
         if (!empty($redis_keys)) {
             $redis_keys_parsed = [];
             foreach ($redis_keys as $perkey) {
-                $arr_temporary = explode(':', $perkey); //pokok e koyok ngene ngkok ['laravel-database-user', '1', 'summary']
+                $arr_temporary = explode(':', $perkey);
                 $arr_temporary[0] = 'user';
                 $arr_to_str = implode(':', $arr_temporary);
-                // dd($arr_to_str);
                 
                 $redis_keys_parsed[] = $arr_to_str;
             }

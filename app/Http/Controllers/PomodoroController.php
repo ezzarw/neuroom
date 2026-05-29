@@ -2,71 +2,58 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\PomodoroHistory;
+use App\Services\PomodoroService;
 use Illuminate\Http\Request;
 
 class PomodoroController extends Controller
 {
-    public function store(Request $request)
+    public function start(Request $request, PomodoroService $service)
     {
-        $validated = $request->validate([
-            'duration_seconds' => ['required', 'integer', 'min:1'],
-        ]);
-
-        $user = $request->user();
-
-        if ($user === null) {
-            return $this->apiError('User tidak ditemukan.', 404);
-        }
-
-        $session = $user->pomodoroHistories()
-            ->whereDate('created_at', now()->toDateString())
-            ->count() + 1;
-
-        $history = $user->pomodoroHistories()->create([
-            'session' => $session,
-            'duration_seconds' => $validated['duration_seconds'],
-        ]);
-
-        return $this->apiSuccess(
-            'Data pomodoro berhasil ditambahkan.',
-            [
-                'id' => $history->id,
-                'session' => $history->session,
-                'date' => $history->created_at?->toDateString(),
-                'duration_seconds' => (int) $history->duration_seconds,
-                'duration' => $this->formatDuration((int) $history->duration_seconds),
-                'created_at' => $this->formatDateTime($history->created_at),
-            ],
-            201
+        return response()->json(
+            $service->start(
+                user: $request->user(),
+                duration: $request->integer('duration', 1500),
+                type: 'focus',
+                autoStartBreak: $request->boolean('auto_start_break', true),
+                autoStartFocus: $request->boolean('auto_start_focus', false),
+            )
         );
     }
 
-    public function history(Request $request)
+    public function startBreak(Request $request, PomodoroService $service)
     {
-        $user = $request->user();
-
-        if ($user === null) {
-            return $this->apiError('User tidak ditemukan.', 404);
-        }
-
-        $sessions = $user->pomodoroHistories()
-            ->latest()
-            ->limit(20)
-            ->get()
-            ->map(fn (PomodoroHistory $history) => [
-                'id' => $history->id,
-                'session' => $history->session,
-                'date' => $history->created_at?->toDateString(),
-                'duration_seconds' => (int) ($history->duration_seconds ?? 0),
-                'duration' => $this->formatDuration((int) ($history->duration_seconds ?? 0)),
-                'created_at' => $this->formatDateTime($history->created_at),
-            ])
-            ->values();
-
-        return $this->apiSuccess(
-            'Riwayat pomodoro berhasil diambil.',
-            $sessions->all()
+        return response()->json(
+            $service->startBreak(
+                user: $request->user(),
+                duration: $request->integer('duration', 300),
+                autoStartBreak: $request->boolean('auto_start_break', true),
+                autoStartFocus: $request->boolean('auto_start_focus', false),
+            )
         );
+    }
+
+    public function pause(Request $request, PomodoroService $service)
+    {
+        return response()->json($service->pause($request->user()));
+    }
+
+    public function resume(Request $request, PomodoroService $service)
+    {
+        return response()->json($service->resume($request->user()));
+    }
+
+    public function stop(Request $request, PomodoroService $service)
+    {
+        return response()->json($service->stop($request->user()));
+    }
+
+    public function finish(Request $request, PomodoroService $service)
+    {
+        return response()->json($service->finish($request->user()));
+    }
+
+    public function current(Request $request, PomodoroService $service)
+    {
+        return response()->json($service->current($request->user()));
     }
 }

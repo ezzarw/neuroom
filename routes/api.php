@@ -7,6 +7,7 @@ use App\Http\Controllers\PomodoroController;
 use App\Http\Controllers\SummaryController;
 use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
+
 Route::prefix('v1')->group(function () {
     Route::prefix('auth')->group(function () {
         Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:5,1');
@@ -22,10 +23,17 @@ Route::prefix('v1')->group(function () {
     Route::middleware('auth:sanctum')->group(function () {
         Route::post('/summary', [SummaryController::class, 'store']);
         Route::post('/summary-to-notes', [SummaryController::class, 'addToNotes']);
-        
-        Route::get('/pomodoro/history', [PomodoroController::class, 'history']);
-        Route::post('/pomodoro/history', [PomodoroController::class, 'store']);
-        
+
+        // pomodoro
+        Route::prefix('pomodoro')->group(function () {
+            Route::get('/current', [PomodoroController::class, 'current']);
+            Route::post('/start', [PomodoroController::class, 'start']);
+            Route::post('/pause', [PomodoroController::class, 'pause']);
+            Route::post('/resume', [PomodoroController::class, 'resume']);
+            Route::post('/stop', [PomodoroController::class, 'stop']);
+            Route::post('/finish', [PomodoroController::class, 'finish']);
+            Route::post('/break/start', [PomodoroController::class, 'startBreak']);
+        });
 
         Route::get('/notes', [NoteController::class, 'index']);
         Route::get('/notes/{id}', [NoteController::class, 'show']);

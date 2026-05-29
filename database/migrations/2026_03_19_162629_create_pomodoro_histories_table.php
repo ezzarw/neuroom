@@ -18,7 +18,6 @@ return new class extends Migration
                 ->on('users')
                 ->cascadeOnUpdate()
                 ->cascadeOnDelete();
-            $table->integer('session');
             $table->unsignedInteger('duration_seconds');
             $table->timestamps();
         });

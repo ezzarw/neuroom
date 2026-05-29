@@ -94,7 +94,6 @@ class SummaryController extends Controller
             'content' => $summary_result
         ];
         $note = Note::query()->create($payload);
-        dd($note);
         $payload = [
             'id' => $note->id,
             'user_id' => $note->user_id,
