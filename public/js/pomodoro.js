@@ -1,6 +1,5 @@
 // =============================
-//  SIMPLE STOPWATCH (FINAL CLEAN)
-//  Fokus: Stopwatch + History
+// POMODORO FRONTEND
 // =============================
 
 // ===== DOM =====
@@ -13,127 +12,258 @@ const refreshBtn = document.getElementById("refreshBtn");
 const trackingList = document.getElementById("trackingList");
 
 // ===== STATE =====
-let state = {
-  running: false,
-  startAt: null,
-  elapsed: 0, // ms
-};
+let currentPomodoro = null;
 
 // ===== UTIL =====
 function pad(n) {
   return String(n).padStart(2, "0");
 }
 
-function formatTime(ms) {
-  const total = Math.floor(ms / 1000);
-  const h = Math.floor(total / 3600);
-  const m = Math.floor((total % 3600) / 60);
-  const s = total % 60;
+function formatTime(seconds) {
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const s = seconds % 60;
+
   return `${pad(h)}:${pad(m)}:${pad(s)}`;
 }
 
-function getCurrentTime() {
-  if (!state.running) return state.elapsed;
-  return state.elapsed + (Date.now() - state.startAt);
+// ===== TIMER =====
+function getRemainingSeconds() {
+  if (!currentPomodoro) return 0;
+
+  if (currentPomodoro.status === "paused") {
+    return currentPomodoro.remaining || 0;
+  }
+
+  if (currentPomodoro.status !== "running") {
+    return 0;
+  }
+
+  const now = new Date();
+  const endsAt = new Date(currentPomodoro.ends_at);
+
+  return Math.max(
+    0,
+    Math.floor((endsAt.getTime() - now.getTime()) / 1000)
+  );
 }
 
-// ===== UI =====
 function updateUI() {
-  timeText.innerText = formatTime(getCurrentTime());
-}
+  const remaining = getRemainingSeconds();
 
-// ===== ACTIONS =====
-function start() {
-  if (state.running) return;
+  timeText.innerText = formatTime(remaining);
 
-  state.running = true;
-  state.startAt = Date.now();
-}
-
-function pause() {
-  if (!state.running) return;
-
-  state.elapsed += Date.now() - state.startAt;
-  state.running = false;
-}
-
-function reset() {
-  state.running = false;
-  state.startAt = null;
-  state.elapsed = 0;
-  updateUI();
-}
-
-// ===== BACKEND =====
-
-// 🔸 BACKEND WAJIB:
-// POST /api/pomodoro/history
-async function saveSession(duration) {
-  return window.NeuroomApi.request("/api/v1/pomodoro/history", {
-    method: "POST",
-    data: {
-      duration_seconds: duration,
-    },
-  });
-}
-
-// 🔸 BACKEND WAJIB:
-// GET /api/pomodoro/history
-async function loadHistory() {
-  try {
-    const res = await window.NeuroomApi.request("/api/v1/pomodoro/history");
-    renderHistory(res.data?.sessions || []);
-  } catch (err) {
-    console.error("Gagal ambil history:", err);
+  if (
+    currentPomodoro &&
+    currentPomodoro.status === "running" &&
+    remaining <= 0
+  ) {
+    finish();
   }
 }
 
-// ===== RENDER HISTORY =====
-function renderHistory(list) {
+// ===== API =====
+
+async function loadCurrent() {
+  try {
+    const res = await window.NeuroomApi.request(
+      "/api/v1/pomodoro/current"
+    );
+
+    currentPomodoro = res.data;
+
+    if (currentPomodoro.status === "idle") {
+      currentPomodoro = null;
+    }
+
+    updateUI();
+  } catch (err) {
+    console.error("Load current gagal:", err);
+  }
+}
+
+async function startPomodoro() {
+  try {
+    const res = await window.NeuroomApi.request(
+      "/api/v1/pomodoro/start",
+      {
+        method: "POST"
+      }
+    );
+
+    currentPomodoro = res.data;
+
+    updateUI();
+  } catch (err) {
+    console.error("Start gagal:", err);
+  }
+}
+
+async function pausePomodoro() {
+  try {
+    const res = await window.NeuroomApi.request(
+      "/api/v1/pomodoro/pause",
+      {
+        method: "POST"
+      }
+    );
+
+    currentPomodoro = res.data;
+
+    updateUI();
+  } catch (err) {
+    console.error("Pause gagal:", err);
+  }
+}
+
+async function resumePomodoro() {
+  try {
+    const res = await window.NeuroomApi.request(
+      "/api/v1/pomodoro/resume",
+      {
+        method: "POST"
+      }
+    );
+
+    currentPomodoro = res.data;
+
+    updateUI();
+  } catch (err) {
+    console.error("Resume gagal:", err);
+  }
+}
+
+async function stopPomodoro() {
+  try {
+    await window.NeuroomApi.request(
+      "/api/v1/pomodoro/stop",
+      {
+        method: "POST"
+      }
+    );
+
+    currentPomodoro = null;
+
+    updateUI();
+
+    await loadHistory();
+  } catch (err) {
+    console.error("Stop gagal:", err);
+  }
+}
+
+async function finish() {
+  try {
+    const res = await window.NeuroomApi.request(
+      "/api/v1/pomodoro/finish",
+      {
+        method: "POST"
+      }
+    );
+
+    currentPomodoro = res.data;
+
+    if (
+      currentPomodoro.status === "finished" ||
+      currentPomodoro.status === "idle"
+    ) {
+      currentPomodoro = null;
+    }
+
+    updateUI();
+
+    await loadHistory();
+  } catch (err) {
+    console.error("Finish gagal:", err);
+  }
+}
+
+// ===== HISTORY =====
+
+async function loadHistory() {
+  try {
+    const res = await window.NeuroomApi.request(
+      "/api/v1/pomodoro/history"
+    );
+
+    renderHistory(res.data?.records || []);
+  } catch (err) {
+    console.error("History gagal:", err);
+  }
+}
+
+function renderHistory(records) {
   trackingList.innerHTML = "";
 
-  if (!list.length) {
-    trackingList.innerHTML = `<p class="empty">Belum ada sesi</p>`;
+  if (!records.length) {
+    trackingList.innerHTML =
+      '<p class="empty">Belum ada sesi fokus</p>';
     return;
   }
 
-  list.forEach(item => {
+  records.forEach(item => {
     const div = document.createElement("div");
+
     div.className = "history-item";
 
     div.innerHTML = `
-      <strong>${item.duration}</strong><br>
-      <span>${window.NeuroomApi.formatDate(item.created_at)}</span>
+      <strong>
+        ${window.NeuroomApi.formatDuration(
+          item.actual_seconds || 0
+        )}
+      </strong>
+      <br>
+
+      <span>
+        ${item.status || "-"}
+      </span>
+      <br>
+
+      <small>
+        ${window.NeuroomApi.formatDate(
+          item.finished_at ||
+          item.stopped_at ||
+          item.started_at
+        )}
+      </small>
     `;
 
     trackingList.appendChild(div);
   });
 }
 
-// ===== FINISH (SIMPAN KE BACKEND) =====
-async function finish() {
-  const duration = Math.floor(getCurrentTime() / 1000);
-
-  if (duration <= 0) {
-    return;
-  }
-
-  await saveSession(duration);
-
-  reset();
-  loadHistory();
-}
-
 // ===== EVENTS =====
-startBtn.addEventListener("click", start);
-pauseBtn.addEventListener("click", pause);
-resetBtn.addEventListener("click", reset);
-finishBtn.addEventListener("click", finish);
-refreshBtn.addEventListener("click", loadHistory);
+
+startBtn.addEventListener("click", async () => {
+  if (
+    currentPomodoro &&
+    currentPomodoro.status === "paused"
+  ) {
+    await resumePomodoro();
+  } else {
+    await startPomodoro();
+  }
+});
+
+pauseBtn.addEventListener("click", pausePomodoro);
+
+resetBtn.addEventListener("click", stopPomodoro);
+
+// tombol selesai = stop manual
+finishBtn.addEventListener("click", stopPomodoro);
+
+refreshBtn.addEventListener("click", async () => {
+  await loadCurrent();
+  await loadHistory();
+});
 
 // ===== LOOP =====
-setInterval(updateUI, 500);
+
+setInterval(updateUI, 1000);
 
 // ===== INIT =====
-updateUI();
-loadHistory();
+
+(async function () {
+  await loadCurrent();
+  await loadHistory();
+})();

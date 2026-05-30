@@ -29,7 +29,7 @@ function applyProfile(user) {
 // ===== LOAD PROFILE =====
 async function loadProfile() {
   try {
-    const response = await window.NeuroomApi.request('/api/v1/me');
+    const response = await window.NeuroomApi.request('/api/v1/auth/me');
     applyProfile(response.data?.user || {});
   } catch (error) {
     setProfileFeedback('Gagal memuat profil.', true);
@@ -43,7 +43,7 @@ profileForm?.addEventListener('submit', async (event) => {
 
   try {
     const formData = new FormData(profileForm);
-    const response = await window.NeuroomApi.request('/api/v1/me', {
+    const response = await window.NeuroomApi.request('/api/v1/auth/me', {
       method: 'PATCH',
       data: formData,
     });

@@ -17,22 +17,18 @@
 
 <div class="pomodoro">
 
-  <!-- LEFT: STOPWATCH -->
+  <!-- LEFT: TIMER -->
   <div class="card center">
     <h2>Fokus Sekarang</h2>
 
-    <!-- FE HANDLE (JS update) -->
-    <div class="time" id="timeText">00:00:00</div>
+    <div class="time" id="timeText">00:25:00</div>
 
-    <p class="sub">Mulai stopwatch untuk sesi fokus</p>
+    <p class="sub">Mulai sesi pomodoro untuk fokus belajar</p>
 
     <div class="controls">
-      <!-- FE HANDLE -->
       <button class="btn primary" id="startBtn">Start</button>
       <button class="btn" id="pauseBtn">Pause</button>
       <button class="btn" id="resetBtn">Reset</button>
-
-      <!-- FE → BE (trigger simpan) -->
       <button class="btn danger" id="finishBtn">Selesai</button>
     </div>
   </div>
@@ -42,22 +38,18 @@
     <div class="row">
       <h3>Riwayat Fokus</h3>
 
-      <!-- FE → BE (fetch ulang data) -->
-      <button class="btn ghost" id="refreshBtn">Refresh</button>
+      <button class="btn ghost" id="refreshBtn">
+        Refresh
+      </button>
     </div>
 
     <div class="history" id="trackingList">
-      {{-- =========================
-         BACKEND / FRONTEND RENDER DATA
-         ========================= --}}
-      {{-- default state awal --}}
       <p class="empty">Belum ada sesi fokus</p>
     </div>
   </div>
 
 </div>
 
-<!-- SCRIPT -->
 <script src="{{ asset('js/stateful-api.js') }}" defer></script>
 <script src="{{ asset('js/pomodoro.js') }}" defer></script>
 

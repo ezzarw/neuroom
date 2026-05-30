@@ -108,16 +108,16 @@ saveBtn?.addEventListener("click", async () => {
     }
 
     try {
-        const response = await fetch("/api/catatan", {
-            method: "POST",
+        const response = await fetch('/api/v1/summary-to-notes', {
+            method: 'POST',
             headers: {
-                "Content-Type": "application/json",
-                "X-CSRF-TOKEN": document.querySelector('meta[name="csrf-token"]').content
-            },
-            body: JSON.stringify({
-                judul: "Ringkasan AI",
-                isi: content
-            })
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+          },
+          body: JSON.stringify({
+            summary: summaryText
+          })
         });
 
         const result = await response.json();
