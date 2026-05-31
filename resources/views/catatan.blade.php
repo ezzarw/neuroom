@@ -104,11 +104,12 @@ async function loadNotes() {
         );
 
         const notesGrid = document.getElementById('notesGrid');
+        const notes = response.data?.items || [];
 
         notesGrid.innerHTML = '';
 
         // EMPTY STATE
-        if (!response.notes || response.notes.length === 0) {
+        if (!notes.length) {
 
             notesGrid.innerHTML = `
                 <div class="empty-state">
@@ -124,7 +125,7 @@ async function loadNotes() {
         }
 
         // RENDER NOTES
-        response.notes.forEach(note => {
+        notes.forEach(note => {
 
             notesGrid.innerHTML += `
                 <div class="note-card"

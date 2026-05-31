@@ -194,53 +194,47 @@ async function loadDashboard() {
     try {
 
         const response = await window.NeuroomApi.request(
-            '/api/v1/dashboard'
+            '/api/v1/auth/me'
         );
 
         // USERNAME
-        if (response.user) {
+        if (response.data) {
             document.getElementById('username').textContent =
-                response.user.username;
-        }
+                response.data.username;
 
-        // STATS
-        if (response.stats) {
+            // STATS
+            const stats = response.data.stats;
+            if (stats) {
+                document.getElementById('total-materi').textContent =
+                    stats.total_materi ?? 0;
 
-            document.getElementById('total-materi').textContent =
-                response.stats.total_materi ?? 0;
+                document.getElementById('quiz-selesai').textContent =
+                    stats.quiz_selesai ?? 0;
 
-            document.getElementById('quiz-selesai').textContent =
-                response.stats.quiz_selesai ?? 0;
+                document.getElementById('total-catatan').textContent =
+                    stats.total_catatan ?? 0;
+            }
 
-            document.getElementById('total-catatan').textContent =
-                response.stats.total_catatan ?? 0;
-        }
+            // ACTIVITIES
+            const activities = response.data.activities;
+            if (Array.isArray(activities) && activities.length > 0) {
+                const activityList = document.getElementById('activity-list');
+                activityList.innerHTML = '';
 
-        // ACTIVITIES
-        const activityList = document.getElementById('activity-list');
-
-        if (response.activities?.length > 0) {
-
-            activityList.innerHTML = '';
-
-            response.activities.forEach(activity => {
-
-                activityList.innerHTML += `
-                    <div class="item">
-
-                        <div class="activity-info">
-                            <strong>${activity.title}</strong>
-                            <span>${activity.time}</span>
+                activities.forEach(activity => {
+                    activityList.innerHTML += `
+                        <div class="item">
+                            <div class="activity-info">
+                                <strong>${activity.title}</strong>
+                                <span>${activity.time}</span>
+                            </div>
+                            <span class="badge">
+                                ${activity.status}
+                            </span>
                         </div>
-
-                        <span class="badge">
-                            ${activity.status}
-                        </span>
-
-                    </div>
-                `;
-            });
-
+                    `;
+                });
+            }
         }
 
     } catch (error) {

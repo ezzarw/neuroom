@@ -34,10 +34,12 @@ async function submitAuth({ form, endpoint, button, feedback }) {
       data,
     });
 
-    setPageFeedback(response.message || 'Berhasil.');
+    setPageFeedback(response.reason || response.message || 'Berhasil.');
 
-    if (response.meta?.redirect_to) {
-      window.location.href = response.meta.redirect_to;
+    const redirectUrl = response.meta?.redirect_to || (endpoint.startsWith('/api/v1/auth/') ? '/utama' : null);
+    if (redirectUrl) {
+      window.location.href = redirectUrl;
+      return;
     }
   } catch (error) {
     if (error.status === 409 && error.payload?.meta?.redirect_to) {

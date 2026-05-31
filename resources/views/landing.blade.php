@@ -154,7 +154,8 @@
             <p class="popup-desc">Masuk untuk mulai belajar lebih fokus</p>
             <div id="login-feedback" style="display:none; margin-bottom: 12px; padding: 10px 12px; border-radius: 10px; background: #fee2e2; color: #991b1b; font-size: 14px;"></div>
 
-            <form method="POST" id="login-form">
+            <form method="POST" action="/api/v1/auth/login" id="login-form">
+                @csrf
                 <input type="email" placeholder="Email" name="email" required>
                 <input type="password" placeholder="Password" name="password" required>
                 <button type="submit" class="btn-primary full" id="login-submit">Login</button>
@@ -176,7 +177,8 @@
             <p class="popup-desc">Buat akun untuk mulai belajar</p>
             <div id="register-feedback" style="display:none; margin-bottom: 12px; padding: 10px 12px; border-radius: 10px; background: #fee2e2; color: #991b1b; font-size: 14px;"></div>
 
-            <form method="POST" id="register-form">
+            <form method="POST" action="/api/v1/auth/register" id="register-form">
+                @csrf
                 <input type="text" placeholder="Nama Lengkap" name="username" required>
                 <input type="email" placeholder="Email" name="email" required>
                 <input type="password" placeholder="Password" name="password" required>

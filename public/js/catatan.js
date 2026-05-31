@@ -1,8 +1,16 @@
 const viewModal = document.getElementById("viewModal");
 const editModal = document.getElementById("editModal");
+const viewTitle = document.getElementById("viewTitle");
+const viewContent = document.getElementById("viewContent");
+const editTitle = document.getElementById("editTitle");
+const editor = document.getElementById("editor");
+const saveNoteButton = document.getElementById("saveNote");
+
+let currentNoteId = null;
 
 // SEARCH
-document.getElementById("searchInput").addEventListener("keyup", function () {
+const searchInput = document.getElementById("searchInput");
+searchInput?.addEventListener("keyup", function () {
     const keyword = this.value.toLowerCase();
 
     document.querySelectorAll(".note-card").forEach(card => {
@@ -11,26 +19,49 @@ document.getElementById("searchInput").addEventListener("keyup", function () {
     });
 });
 
-// VIEW
-document.querySelectorAll(".open-view").forEach(btn => {
-    btn.onclick = () => {
+// VIEW / EDIT / DELETE (delegated)
+document.body.addEventListener("click", (event) => {
+    const viewBtn = event.target.closest(".open-view");
+    if (viewBtn) {
         viewModal.style.display = "flex";
-        viewTitle.innerText = btn.dataset.title;
-        viewContent.innerHTML = btn.dataset.content;
-    };
+        viewTitle.innerText = viewBtn.dataset.title;
+        viewContent.innerHTML = viewBtn.dataset.content;
+        return;
+    }
+
+    const editBtn = event.target.closest(".open-edit");
+    if (editBtn) {
+        currentNoteId = editBtn.dataset.id || null;
+        editModal.style.display = "flex";
+        editTitle.value = editBtn.dataset.title;
+        editor.innerHTML = editBtn.dataset.content;
+        return;
+    }
+
+    const deleteBtn = event.target.closest(".btn-delete");
+    if (deleteBtn) {
+        if (confirm("Hapus catatan?")) {
+            deleteNote(deleteBtn.dataset.id);
+        }
+    }
 });
 
-// EDIT
-document.querySelectorAll(".open-edit").forEach(btn => {
-    btn.onclick = () => {
-        editModal.style.display = "flex";
-        editTitle.value = btn.dataset.title;
-        editor.innerHTML = btn.dataset.content;
-    };
-});
+async function deleteNote(noteId) {
+    try {
+        await window.NeuroomApi.request(`/api/v1/notes/${noteId}`, {
+            method: 'DELETE',
+        });
+
+        await loadNotes();
+    } catch (error) {
+        console.error('Hapus catatan gagal:', error);
+        alert('Gagal menghapus catatan. Coba lagi.');
+    }
+}
 
 // ADD
 document.getElementById("addNote").onclick = () => {
+    currentNoteId = null;
     editModal.style.display = "flex";
     editTitle.value = "";
     editor.innerHTML = "";
@@ -41,16 +72,7 @@ document.querySelectorAll(".close").forEach(btn => {
     btn.onclick = () => {
         viewModal.style.display = "none";
         editModal.style.display = "none";
-    };
-});
-
-// DELETE (backend nanti handle)
-document.querySelectorAll(".btn-delete").forEach(btn => {
-    btn.onclick = () => {
-        if (confirm("Hapus catatan?")) {
-            console.log("DELETE ID:", btn.dataset.id);
-            // fetch('/catatan/' + id, { method: 'DELETE' })
-        }
+        currentNoteId = null;
     };
 });
 
@@ -59,9 +81,8 @@ function formatText(cmd) {
     document.execCommand(cmd, false, null);
 }
 
-// SAVE NOTE (frontend only)
-document.getElementById("saveNote").onclick = () => {
-
+// SAVE NOTE
+saveNoteButton?.addEventListener('click', async () => {
     const title = editTitle.value.trim();
     const content = editor.innerHTML.trim();
 
@@ -70,14 +91,35 @@ document.getElementById("saveNote").onclick = () => {
         return;
     }
 
-    alert("Catatan berhasil dibuat!");
+    try {
+        if (currentNoteId) {
+            await window.NeuroomApi.request(`/api/v1/notes/${currentNoteId}`, {
+                method: 'PATCH',
+                data: {
+                    title,
+                    content,
+                },
+            });
+            alert('Catatan berhasil diperbarui.');
+        } else {
+            await window.NeuroomApi.request('/api/v1/notes', {
+                method: 'POST',
+                data: {
+                    title,
+                    content,
+                },
+            });
+            alert('Catatan berhasil dibuat.');
+        }
 
-    console.log({
-        title: title,
-        content: content
-    });
-
-    // nanti backend fetch disini
-
-    editModal.style.display = "none";
-};
+        editModal.style.display = "none";
+        currentNoteId = null;
+        await loadNotes();
+    } catch (error) {
+        console.error('Simpan catatan gagal:', error);
+        const message = error.payload?.errors
+            ? Object.values(error.payload.errors).flat()[0]
+            : error.message;
+        alert(message || 'Gagal menyimpan catatan.');
+    }
+});

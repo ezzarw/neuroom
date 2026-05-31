@@ -8,6 +8,8 @@ const summaryResult = document.getElementById('summary-result');
 const summaryStatus = document.getElementById('summary-status');
 const summaryMessage = document.getElementById('summary-message');
 const summaryOutput = document.getElementById('summary-output');
+const cancelBtn = document.getElementById('cancelSummaryBtn');
+const saveBtn = document.getElementById('saveSummaryBtn');
 
 // ===== ERROR BOX =====
 function setSummaryError(message) {
@@ -71,9 +73,9 @@ form?.addEventListener('submit', async (event) => {
       data: formData,
     });
 
-    const summary = response.data?.summary || {};
+    const summary = response.data || {};
     summaryStatus.textContent = summary.status || 'success';
-    summaryMessage.textContent = response.message || 'Ringkasan selesai.';
+    summaryMessage.textContent = response.reason || response.message || 'Ringkasan selesai.';
     renderSummary(summary.output || []);
     summaryResult.style.display = 'block';
   } catch (error) {
@@ -86,11 +88,7 @@ form?.addEventListener('submit', async (event) => {
   }
 });
 
-const cancelBtn = document.getElementById("cancelSummaryBtn");
-const saveBtn = document.getElementById("saveSummaryBtn");
 
-const summaryResult = document.getElementById("summary-result");
-const summaryOutput = document.getElementById("summary-output");
 
 // 🔴 BATAL
 cancelBtn?.addEventListener("click", () => {
@@ -108,29 +106,15 @@ saveBtn?.addEventListener("click", async () => {
     }
 
     try {
-        const response = await fetch('/api/v1/summary-to-notes', {
-            method: 'POST',
-            headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
-          },
-          body: JSON.stringify({
-            summary: summaryText
-          })
+        const response = await window.NeuroomApi.request('/api/v1/summary-to-notes', {
+            method: 'POST'
         });
 
-        const result = await response.json();
-
-        if (response.ok) {
-            alert("Berhasil disimpan ke catatan");
-            window.location.href = "/catatan";
-        } else {
-            alert(result.message || "Gagal menyimpan");
-        }
-
+        alert(response.reason || response.message || 'Berhasil disimpan ke catatan');
+        window.location.href = '/catatan';
     } catch (error) {
+        const message = error.payload?.message || error.payload?.reason || error.message;
         console.error(error);
-        alert("Terjadi kesalahan server");
+        alert(message || 'Terjadi kesalahan server');
     }
 });
