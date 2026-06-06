@@ -17,7 +17,7 @@
 
 <section class="choose-section">
 
-    <h1 class="headline">Summary dan Quiz yang bisa kamu pelajari</h1>
+    <h1 class="headline">Summary akan membantumu belajar!</h1>
     <!-- 🔥 SUMMARY -->
     <div class="summary-box">
 
@@ -84,25 +84,6 @@
 
 
     </div>
-    <h1 class="headline">Pilih Quiz sesuai kebutuhanmu</h1>
-    <!-- CARD -->
-    <div class="card-wrapper">
-    
-    <a href="{{ route('quiz.umum') }}" class="card">
-        <img src="{{ asset('img/umum.jpg') }}" class="card-img">
-        <h2>Pelajaran Umum</h2>
-        <p>Matematika, Bahasa Indonesia dan Bahasa Inggris.</p>
-        <span class="cta">Mulai Quiz →</span>
-    </a>
-
-    <a href="{{ route('quiz.kejuruan') }}" class="card">
-        <img src="{{ asset('img/jurusan.jpg') }}" class="card-img">
-        <h2>Pelajaran Kejuruan</h2>
-        <p>Materi sesuai jurusan seperti SIJA, RPL dan TKJ.</p>
-        <span class="cta">Mulai Quiz →</span>
-    </a>
-
-</div>
 
 </section>
 

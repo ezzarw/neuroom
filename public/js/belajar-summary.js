@@ -21,15 +21,12 @@ function setSummaryError(message) {
 function renderSummary(output) {
   summaryOutput.innerHTML = '';
 
-  if (!Array.isArray(output) || output.length === 0) {
+  if (!output || output.trim() === '') {
     summaryOutput.textContent = 'Tidak ada poin ringkasan.';
     return;
   }
 
-  const markdownText = output.join('\n');
-
-  
-  summaryOutput.innerHTML = marked.parse(markdownText);
+  summaryOutput.innerHTML = marked.parse(output);
 }
 
 // klik buka file

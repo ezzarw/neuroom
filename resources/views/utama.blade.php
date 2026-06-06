@@ -54,10 +54,6 @@
                         <strong id="total-materi">12</strong>
                     </div>
 
-                    <div class="stat">
-                        <span>Quiz Selesai</span>
-                        <strong id="quiz-selesai">7</strong>
-                    </div>
 
                     <div class="stat">
                         <span>Catatan</span>
@@ -75,17 +71,6 @@
                 </div>
 
                 <div class="list">
-
-                    <!-- QUIZ -->
-                    <a href="/belajar" class="item clickable">
-                        <div>
-                            <strong>Belajar & Quiz</strong>
-                            <span>Belajar dan Kerjakan quiz terakhir kamu</span>
-                        </div>
-
-                        <span class="badge">Quiz</span>
-                    </a>
-
                     <!-- CATATAN -->
                     <a href="/catatan" class="item clickable">
                         <div>
@@ -207,9 +192,6 @@ async function loadDashboard() {
             if (stats) {
                 document.getElementById('total-materi').textContent =
                     stats.total_materi ?? 0;
-
-                document.getElementById('quiz-selesai').textContent =
-                    stats.quiz_selesai ?? 0;
 
                 document.getElementById('total-catatan').textContent =
                     stats.total_catatan ?? 0;

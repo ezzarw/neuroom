@@ -157,7 +157,19 @@
             <form method="POST" action="/api/v1/auth/login" id="login-form">
                 @csrf
                 <input type="email" placeholder="Email" name="email" required>
-                <input type="password" placeholder="Password" name="password" required>
+                <div class="password-wrapper">
+                    <input type="password" placeholder="Password" name="password" required class="password-input">
+                    <button type="button" class="password-toggle" aria-label="Toggle password visibility">
+                        <svg class="eye-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                            <circle cx="12" cy="12" r="3"></circle>
+                        </svg>
+                        <svg class="eye-closed-icon" style="display:none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                            <line x1="1" y1="1" x2="23" y2="23"></line>
+                        </svg>
+                    </button>
+                </div>
                 <button type="submit" class="btn-primary full" id="login-submit">Login</button>
             </form>
 
@@ -181,7 +193,19 @@
                 @csrf
                 <input type="text" placeholder="Nama Lengkap" name="username" required>
                 <input type="email" placeholder="Email" name="email" required>
-                <input type="password" placeholder="Password" name="password" required>
+                <div class="password-wrapper">
+                    <input type="password" placeholder="Password" name="password" required class="password-input">
+                    <button type="button" class="password-toggle" aria-label="Toggle password visibility">
+                        <svg class="eye-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                            <circle cx="12" cy="12" r="3"></circle>
+                        </svg>
+                        <svg class="eye-closed-icon" style="display:none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                            <line x1="1" y1="1" x2="23" y2="23"></line>
+                        </svg>
+                    </button>
+                </div>
                 <button type="submit" class="btn-primary full" id="register-submit">Daftar</button>
             </form>
 
@@ -189,6 +213,21 @@
                 Sudah punya akun?
                 <a href="#login-popup">Login</a>
             </p>
+        </div>
+    </div>
+
+    <!-- SUCCESS ALERT MODAL -->
+    <div id="success-alert" class="success-alert-overlay">
+        <div class="success-alert-box">
+            <div class="success-checkmark">
+                <svg viewBox="0 0 52 52" class="checkmark-circle">
+                    <circle cx="26" cy="26" r="25" fill="none" stroke-width="2"/>
+                    <path d="M14.1 27.2l7.1 7.2 16.7-16.8" fill="none" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+                </svg>
+            </div>
+            <h2 id="success-title">Berhasil</h2>
+            <p id="success-message"></p>
+            <button id="success-btn" class="btn-primary" style="margin-top: 20px; width: 100%;">Lanjut</button>
         </div>
     </div>
 

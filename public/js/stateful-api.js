@@ -1,7 +1,9 @@
 (function () {
   // ===== CSRF TOKEN =====
   function getCsrfToken() {
-    return document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+    const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+    console.log('CSRF Token from meta:', token); // Debug
+    return token;
   }
 
   // ===== REQUEST HELPER =====
@@ -14,6 +16,7 @@
     const csrfToken = getCsrfToken();
     if (csrfToken) {
       headers['X-CSRF-TOKEN'] = csrfToken;
+      console.log('Sending X-CSRF-TOKEN header:', csrfToken); // Debug
     }
 
     const config = {

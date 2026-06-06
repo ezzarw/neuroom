@@ -33,10 +33,6 @@ Route::middleware('auth')->group(function () {
     Route::view('/utama', 'utama')->name('utama');
     Route::view('/profile', 'profile')->name('profile');
 
-    // QUIZ 
-    Route::view('/quiz-umum', 'quiz-umum')->name('quiz.umum');
-    Route::view('/quiz-kejuruan', 'quiz-kejuruan')->name('quiz.kejuruan');
-    Route::view('/kerjakan-quiz', 'kerjakan-quiz')->name('quiz.play');
 });
 
 

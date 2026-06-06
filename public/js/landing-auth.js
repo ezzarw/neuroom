@@ -21,6 +21,40 @@ function setPageFeedback(message, isError = false) {
   pageFeedback.style.color = isError ? '#991b1b' : '#166534';
 }
 
+// ===== SUCCESS ALERT =====
+let currentRedirectUrl = null;
+
+function showSuccessAlert(title, message, redirectUrl, autoClose = true) {
+  const alertOverlay = document.getElementById('success-alert');
+  const titleEl = document.getElementById('success-title');
+  const messageEl = document.getElementById('success-message');
+  const btnEl = document.getElementById('success-btn');
+  
+  titleEl.textContent = title.replace(/!$/, '') || 'Berhasil';
+  messageEl.textContent = message || 'Operasi berhasil dilakukan.';
+  currentRedirectUrl = redirectUrl;
+  
+  alertOverlay.classList.add('show');
+  
+  // Auto-close after 1 second for login/register
+  if (autoClose) {
+    setTimeout(() => {
+      alertOverlay.classList.remove('show');
+      if (currentRedirectUrl) {
+        window.location.href = currentRedirectUrl;
+      }
+    }, 1000);
+  }
+  
+  // Manual close button (if user clicks)
+  btnEl.onclick = () => {
+    alertOverlay.classList.remove('show');
+    if (currentRedirectUrl) {
+      window.location.href = currentRedirectUrl;
+    }
+  };
+}
+
 // ===== AUTH SUBMIT =====
 async function submitAuth({ form, endpoint, button, feedback }) {
   setFeedback(feedback, '');
@@ -29,21 +63,22 @@ async function submitAuth({ form, endpoint, button, feedback }) {
 
   try {
     const data = Object.fromEntries(new FormData(form).entries());
+    console.log('Sending data:', data); // Debug
     const response = await window.NeuroomApi.request(endpoint, {
       method: 'POST',
       data,
     });
 
-    setPageFeedback(response.reason || response.message || 'Berhasil.');
-
+    const message = response.reason || response.message || 'Berhasil.';
+    const title = endpoint.includes('/login') ? 'Login Berhasil' : 'Daftar Berhasil';
     const redirectUrl = response.meta?.redirect_to || (endpoint.startsWith('/api/v1/auth/') ? '/utama' : null);
-    if (redirectUrl) {
-      window.location.href = redirectUrl;
-      return;
-    }
+    
+    showSuccessAlert(title, message, redirectUrl);
+    return;
   } catch (error) {
-    if (error.status === 409 && error.payload?.meta?.redirect_to) {
-      window.location.href = error.payload.meta.redirect_to;
+    if (error.status === 409) {
+      const redirectUrl = error.payload?.meta?.redirect_to || '/utama';
+      window.location.href = redirectUrl;
       return;
     }
 
@@ -75,5 +110,26 @@ registerForm?.addEventListener('submit', (event) => {
     endpoint: '/api/v1/auth/register',
     button: registerSubmit,
     feedback: registerFeedback,
+  });
+});
+
+// ===== PASSWORD VISIBILITY TOGGLE =====
+document.querySelectorAll('.password-toggle').forEach((btn) => {
+  btn.addEventListener('click', (event) => {
+    event.preventDefault();
+    const input = btn.previousElementSibling;
+    const eyeIcon = btn.querySelector('.eye-icon');
+    const eyeClosedIcon = btn.querySelector('.eye-closed-icon');
+    const isPassword = input.type === 'password';
+    
+    input.type = isPassword ? 'text' : 'password';
+    
+    if (isPassword) {
+      eyeIcon.style.display = 'none';
+      eyeClosedIcon.style.display = 'block';
+    } else {
+      eyeIcon.style.display = 'block';
+      eyeClosedIcon.style.display = 'none';
+    }
   });
 });
