@@ -32,7 +32,7 @@ abstract class Controller
         $base = Str::slug($naturalUsername, '');
         $base = $base === '' ? Str::lower(Str::random(8)) : $base;
         $uniqueUsername = $base;
-
+ 
         if (! User::where('username', $uniqueUsername)->exists()) {
             return $uniqueUsername;
         }
