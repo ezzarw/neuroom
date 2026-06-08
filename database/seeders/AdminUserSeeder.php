@@ -11,10 +11,10 @@ class AdminUserSeeder extends Seeder
     public function run(): void
     {
         User::updateOrCreate(
-            ['username' => 'admin'],
+            ['username' => env('ADMIN_USERNAME', 'admin')],
             [
-                'email' => 'admin@neuroom.local',
-                'password' => Hash::make('Admin12345'),
+                'email' => env('ADMIN_EMAIL', 'admin@neuroom.test'),
+                'password' => Hash::make(env('ADMIN_PASSWORD', 'password')),
                 'is_admin' => 1,
                 'display_name' => 'Administrator',
                 'profile_picture' => null,
