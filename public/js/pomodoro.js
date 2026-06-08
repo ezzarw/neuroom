@@ -14,6 +14,16 @@ const trackingList = document.getElementById("trackingList");
 // ===== STATE =====
 let currentPomodoro = null;
 
+// WebSocket hook: di panggil dari pomodoro-echo.js
+window.__pomodoroState = function (payload) {
+  if (!payload || payload.status === 'idle') {
+    currentPomodoro = null;
+  } else {
+    currentPomodoro = payload;
+  }
+  updateUI();
+};
+
 // ===== UTIL =====
 function pad(n) {
   return String(n).padStart(2, "0");
