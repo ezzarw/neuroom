@@ -42,7 +42,11 @@ jobs:
 
       - name: Create .env
         run: |
-          cp .env.example .env
+          if [ -f .env.example ]; then
+            cp .env.example .env
+          else
+            touch .env
+          fi
           echo "APP_KEY=" >> .env
 
       - name: Install Composer Dependencies
