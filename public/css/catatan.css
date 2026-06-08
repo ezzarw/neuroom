@@ -1,28 +1,24 @@
-/* =========================
-   PAGE
-========================= */
-
 .page {
-  padding: 60px 0 100px;
+  padding: 42px 0 104px;
 }
 
 .title {
-  font-size: 30px;
   margin-bottom: 20px;
-  font-weight: 700;
+  font-size: clamp(30px, 4vw, 44px);
+  line-height: 1.1;
+  letter-spacing: 0;
 }
 
-/* =========================
-   SEARCH (NEW)
-========================= */
-
 .notes-header {
-  margin-bottom: 30px;
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 22px;
 }
 
 .search-box {
   position: relative;
-  max-width: 360px;
+  width: min(460px, 100%);
 }
 
 .search-box i {
@@ -30,277 +26,389 @@
   top: 50%;
   left: 14px;
   transform: translateY(-50%);
+  color: var(--muted);
   font-size: 14px;
-  color: #888;
 }
 
 .search-box input {
   width: 100%;
-  padding: 11px 14px 11px 40px;
-  border-radius: 12px;
-  border: 1px solid #e5e5e5;
-  background: #fff;
-  font-size: 14px;
-  transition: 0.2s ease;
+  min-height: 46px;
+  padding: 0 14px 0 42px;
 }
-
-.search-box input:focus {
-  outline: none;
-  border-color: #5FA8A3;
-  box-shadow: 0 0 0 3px rgba(95,168,163,0.15);
-}
-
-/* =========================
-   GRID
-========================= */
 
 .notes-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-  gap: 24px;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 18px;
 }
 
-/* =========================
-   CARD (UPGRADED)
-========================= */
-
 .note-card {
-  background: #ffffff;
-  padding: 22px;
-  border-radius: 20px;
-  border: 1px solid rgba(0,0,0,0.05);
-  box-shadow: 0 10px 25px rgba(0,0,0,0.04);
+  min-height: 184px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  transition: all 0.25s ease;
-  position: relative;
+  gap: 10px;
+  padding: 20px;
+  background: #ffffff;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-soft);
+  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
 }
 
 .note-card:hover {
-  transform: translateY(-6px);
-  box-shadow: 0 18px 40px rgba(0,0,0,0.08);
+  border-color: rgba(95, 168, 163, 0.34);
+  box-shadow: var(--shadow);
+  transform: translateY(-3px);
 }
 
-/* TITLE */
 .note-card h3 {
-  font-size: 17px;
-  font-weight: 600;
-  color: #2F3E3E;
+  color: var(--text);
+  font-size: 18px;
+  line-height: 1.25;
 }
 
-/* CONTENT PREVIEW */
 .note-card p {
+  color: var(--muted);
   font-size: 14px;
-  color: #555;
-  line-height: 1.5;
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
 }
 
-/* META */
 .note-meta {
+  color: var(--muted);
   font-size: 12px;
-  color: #999;
+  font-weight: 700;
 }
-
-/* =========================
-   ACTIONS (ICON BUTTON)
-========================= */
 
 .note-actions {
   display: flex;
-  gap: 10px;
+  gap: 8px;
   margin-top: auto;
+}
+
+.note-actions button,
+.toolbar button,
+.close {
+  cursor: pointer;
 }
 
 .note-actions button {
   width: 38px;
   height: 38px;
-  border-radius: 10px;
-  border: none;
-  background: #f4f4f4;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: 0.2s ease;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+  background: var(--surface-muted);
+  color: var(--text);
+  transition: background 0.18s ease, transform 0.18s ease, color 0.18s ease;
 }
 
-/* ICON */
-.note-actions i {
-  font-size: 14px;
-  color: #2F3E3E;
-}
-
-/* HOVER EFFECT */
 .note-actions button:hover {
-  background: #E6C972;
-  transform: scale(1.05);
+  background: var(--primary);
+  color: #ffffff;
+  transform: translateY(-1px);
 }
 
-/* DELETE SPECIAL */
+.note-actions button:hover i {
+  color: #ffffff;
+}
+
 .btn-delete:hover {
-  background: #ef4444;
+  background: var(--danger) !important;
 }
-
-.btn-delete:hover i {
-  color: #fff;
-}
-
-/* =========================
-   EMPTY STATE
-========================= */
 
 .empty-state {
+  grid-column: 1 / -1;
+  padding: 58px 20px;
   text-align: center;
-  padding: 80px 20px;
-  grid-column: 1/-1;
+  background: #ffffff;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius);
 }
 
 .empty-state h3 {
+  margin-bottom: 8px;
   font-size: 22px;
-  margin-bottom: 10px;
 }
 
 .empty-state p {
-  color: #777;
-  margin-bottom: 20px;
+  margin-bottom: 18px;
+  color: var(--muted);
 }
-
-/* =========================
-   FLOATING BUTTON
-========================= */
 
 .fab {
   position: fixed;
-  bottom: 30px;
-  right: 30px;
+  right: 26px;
+  bottom: 26px;
+  z-index: 80;
   width: 58px;
   height: 58px;
+  display: grid;
+  place-items: center;
+  border: 0;
   border-radius: 50%;
-  background: #E6C972;
-  border: none;
-  box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+  background: var(--accent);
+  color: #000000;
+  box-shadow: 0 14px 30px rgba(230, 201, 114, 0.34);
   cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: 0.25s;
+  transition: transform 0.18s ease, filter 0.18s ease;
 }
 
 .fab:hover {
-  transform: scale(1.1);
+  filter: brightness(0.98);
+  transform: translateY(-2px);
 }
-
-.fab i {
-  font-size: 18px;
-  color: #000;
-}
-
-/* =========================
-   MODAL (UPGRADE)
-========================= */
 
 .modal {
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,0.5);
-  display: none;
-  justify-content: center;
-  align-items: center;
   z-index: 999;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(47, 62, 62, 0.54);
 }
 
 .modal-content {
-  background: #F8F6F2;
-  width: 100%;
-  max-width: 620px;
-  border-radius: 20px;
-  padding: 26px;
-  animation: fadeIn 0.2s ease;
+  width: min(860px, 100%);
+  max-height: calc(100vh - 40px);
+  overflow: auto;
+  padding: 24px;
+  background: #ffffff;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
 }
 
-/* HEADER */
 .modal-header {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  margin-bottom: 14px;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 16px;
+}
+
+.modal-header h3 {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .modal-header input {
   width: 100%;
-  font-size: 18px;
-  border: none;
-  outline: none;
-  background: transparent;
-  font-weight: 600;
+  min-height: 48px;
+  padding: 0 14px;
+  font-size: 20px;
+  font-weight: 800;
 }
 
-/* CLOSE */
 .close {
+  flex: 0 0 auto;
+  width: 38px;
+  height: 38px;
+  border: 0;
+  border-radius: var(--radius-control);
+  background: var(--surface-muted);
+  color: var(--muted);
   font-size: 24px;
-  cursor: pointer;
-  border: none;
-  background: none;
+  line-height: 1;
 }
 
-/* VIEW */
 .note-view {
-  max-height: 400px;
-  overflow-y: auto;
-  font-size: 14px;
-  line-height: 1.6;
+  max-height: 460px;
+  overflow: auto;
+  color: var(--text);
+  line-height: 1.7;
 }
 
-/* EDITOR */
+.note-view > *:first-child {
+  margin-top: 0;
+}
+
+.note-view > *:last-child {
+  margin-bottom: 0;
+}
+
+.note-view h1,
+.note-view h2,
+.note-view h3 {
+  margin: 18px 0 10px;
+  line-height: 1.2;
+}
+
+.note-view h1 {
+  font-size: 30px;
+}
+
+.note-view h2 {
+  font-size: 24px;
+}
+
+.note-view h3 {
+  font-size: 20px;
+}
+
+.note-view p {
+  margin: 0 0 12px;
+}
+
+.note-view code {
+  padding: 2px 6px;
+  background: var(--surface-muted);
+  border-radius: 6px;
+  font-size: 0.92em;
+}
+
+.note-view pre {
+  overflow: auto;
+  padding: 14px;
+  background: var(--surface-muted);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+}
+
+.note-view blockquote {
+  margin: 14px 0;
+  padding: 10px 14px;
+  border-left: 4px solid var(--primary);
+  background: var(--surface-muted);
+  border-radius: var(--radius-control);
+}
+
 .toolbar {
   display: flex;
-  gap: 10px;
-  margin-bottom: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+  padding: 10px;
+  background: var(--surface-muted);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.toolbar button,
+.toolbar-select {
+  min-width: 38px;
+  height: 38px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+  background: #ffffff;
+  color: var(--text);
 }
 
 .toolbar button {
-  border: none;
-  padding: 6px 10px;
-  border-radius: 8px;
-  cursor: pointer;
-  background: #fff;
+  display: inline-grid;
+  place-items: center;
+  padding: 0 10px;
+  font-weight: 800;
+  transition: background 0.18s ease, border-color 0.18s ease, color 0.18s ease;
+}
+
+.toolbar button:hover,
+.toolbar button.active {
+  border-color: rgba(95, 168, 163, 0.42);
+  background: var(--primary-soft);
+  color: var(--primary-dark);
+}
+
+.toolbar-select {
+  min-width: 140px;
+  padding: 0 10px;
+  font-weight: 700;
+}
+
+.toolbar-separator {
+  width: 1px;
+  height: 28px;
+  background: var(--border);
 }
 
 #editor {
-  min-height: 200px;
-  background: #fff;
-  border-radius: 12px;
-  padding: 14px;
+  width: 100%;
+  min-height: 360px;
+  padding: 22px;
+  background: #ffffff;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  font: inherit;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  font-size: 15px;
+  line-height: 1.7;
   outline: none;
+  resize: vertical;
+  white-space: pre-wrap;
 }
 
-/* FOOTER */
+.note-view ul,
+.note-view ol {
+  padding-left: 24px;
+  margin: 8px 0 12px;
+}
+
+.note-view li {
+  margin-bottom: 6px;
+}
+
 .modal-footer {
-  margin-top: 16px;
-  text-align: right;
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 14px;
 }
 
 .modal-footer .btn {
-  background: #5FA8A3;
-  color: #fff;
-  border: none;
-  padding: 10px 18px;
-  border-radius: 10px;
+  min-height: 42px;
+  padding: 0 18px;
+  border: 0;
+  border-radius: var(--radius-control);
+  background: var(--primary);
+  color: #ffffff;
+  font-weight: 800;
   cursor: pointer;
 }
 
-/* =========================
-   ANIMATION
-========================= */
-
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: scale(0.95);
+@media (max-width: 560px) {
+  .page {
+    padding-top: 30px;
   }
-  to {
-    opacity: 1;
-    transform: scale(1);
+
+  .notes-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .modal {
+    padding: 10px;
+  }
+
+  .modal-content {
+    max-height: calc(100vh - 20px);
+    padding: 16px;
+  }
+
+  .toolbar {
+    gap: 6px;
+    padding: 8px;
+  }
+
+  .toolbar-select {
+    min-width: 100%;
+  }
+
+  .toolbar-separator {
+    display: none;
+  }
+
+  #editor {
+    min-height: 300px;
+    padding: 16px;
+  }
+
+  .fab {
+    right: 18px;
+    bottom: 18px;
   }
 }

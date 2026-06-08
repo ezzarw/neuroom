@@ -21,16 +21,19 @@ function setSummaryError(message) {
 function renderSummary(output) {
   summaryOutput.innerHTML = '';
 
-  if (!output || output.trim() === '') {
+  const markdownText = Array.isArray(output)
+    ? output.join('\n')
+    : typeof output === 'string'
+      ? output
+      : '';
+
+  if (markdownText.trim() === '') {
     summaryOutput.textContent = 'Tidak ada poin ringkasan.';
     return;
   }
 
-  summaryOutput.innerHTML = marked.parse(output);
+  summaryOutput.innerHTML = marked.parse(markdownText);
 }
-
-// klik buka file
-dropArea?.addEventListener('click', () => fileInput.click());
 
 // drag effect
 dropArea?.addEventListener('dragover', (event) => {

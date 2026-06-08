@@ -64,17 +64,43 @@
     <div class="modal-content">
 
         <div class="modal-header">
-            <input id="editTitle" placeholder="Judul catatan...">
+            <input id="editTitle" placeholder="Judul catatan..." spellcheck="false">
             <button class="close">&times;</button>
         </div>
 
-        <div class="toolbar">
-            <button onclick="formatText('bold')"><b>B</b></button>
-            <button onclick="formatText('italic')"><i>I</i></button>
-            <button onclick="formatText('underline')"><u>U</u></button>
+        <div class="toolbar" aria-label="Toolbar editor catatan">
+            <button type="button" class="toolbar-btn" data-command="undo" title="Undo">
+                <i class="fa-solid fa-rotate-left"></i>
+            </button>
+            <button type="button" class="toolbar-btn" data-command="redo" title="Redo">
+                <i class="fa-solid fa-rotate-right"></i>
+            </button>
+            <span class="toolbar-separator"></span>
+            <select id="blockFormat" class="toolbar-select" title="Format teks">
+                <option value="P">Paragraf</option>
+                <option value="H2">Judul</option>
+                <option value="H3">Subjudul</option>
+            </select>
+            <span class="toolbar-separator"></span>
+            <button type="button" class="toolbar-btn" data-command="bold" title="Bold">
+                <strong>B</strong>
+            </button>
+            <button type="button" class="toolbar-btn" data-command="italic" title="Italic">
+                <em>I</em>
+            </button>
+            <button type="button" class="toolbar-btn" data-command="underline" title="Underline">
+                <u>U</u>
+            </button>
+            <span class="toolbar-separator"></span>
+            <button type="button" class="toolbar-btn" data-command="insertUnorderedList" title="Bullet list">
+                <i class="fa-solid fa-list-ul"></i>
+            </button>
+            <button type="button" class="toolbar-btn" data-command="insertOrderedList" title="Numbered list">
+                <i class="fa-solid fa-list-ol"></i>
+            </button>
         </div>
 
-        <div id="editor" contenteditable="true"></div>
+        <textarea id="editor" placeholder="Tulis catatan Markdown di sini..." spellcheck="false"></textarea>
 
         <div class="modal-footer">
             <button class="btn" id="saveNote">Simpan</button>
@@ -87,6 +113,8 @@
 <script src="{{ asset('js/stateful-api.js') }}"></script>
 
 <!-- JS -->
+<script src="https://cdn.jsdelivr.net/npm/dompurify@3.2.6/dist/purify.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 <script src="{{ asset('js/catatan.js') }}"></script>
 
 <script>
@@ -129,12 +157,12 @@ async function loadNotes() {
 
             notesGrid.innerHTML += `
                 <div class="note-card"
-                     data-title="${note.title.toLowerCase()}">
+                     data-title="${escapeHtml(note.title.toLowerCase())}">
 
-                    <h3>${note.title}</h3>
+                    <h3>${escapeHtml(note.title)}</h3>
 
                     <p>
-                        ${stripHtml(note.content).slice(0, 100)}...
+                        ${escapeHtml(markdownToText(note.content)).slice(0, 110)}...
                     </p>
 
                     <div class="note-meta">
@@ -197,6 +225,16 @@ function stripHtml(html) {
     div.innerHTML = html;
 
     return div.textContent || div.innerText || '';
+}
+
+function markdownToText(markdown) {
+
+    const source = markdown || '';
+    const html = window.marked
+        ? window.marked.parse(source)
+        : source.replace(/\n/g, '<br>');
+
+    return stripHtml(html);
 }
 
 function escapeHtml(text) {
