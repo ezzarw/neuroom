@@ -52,8 +52,9 @@ class PomodoroAndSummaryApiTest extends TestCase
         $user = $this->createUser();
         Sanctum::actingAs($user);
 
+        Http::preventStrayRequests();
         Http::fake([
-            'https://generativelanguage.googleapis.com/*' => Http::response([
+            'generativelanguage.googleapis.com/*' => Http::response([
                 'candidates' => [
                     [
                         'content' => [
