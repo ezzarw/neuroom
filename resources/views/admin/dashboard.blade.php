@@ -37,6 +37,82 @@
         .logout-btn:hover {
             background: #dc2626;
         }
+        .log-action { font-weight: 600; text-transform: uppercase; font-size: 0.85em; padding: 4px 8px; border-radius: 4px; background: #e2e8f0; color: #475569; display: inline-block;}
+        .log-action.login { background: #dcfce7; color: #166534; }
+        .log-action.logout { background: #fee2e2; color: #991b1b; }
+        .log-action.register { background: #dbeafe; color: #1e40af; }
+
+        /* GRID CCTV & TERMINAL SECTION (CLEAN THEME) */
+        .monitoring-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 20px;
+            margin-bottom: 24px;
+        }
+
+        .terminal-card {
+            background: #fff;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+            border: 1px solid #e2e8f0;
+            overflow: hidden;
+            height: 400px;
+            display: flex;
+            flex-direction: column;
+        }
+        .terminal-header {
+            color: #475569;
+            font-size: 14px;
+            font-weight: 700;
+            border-bottom: 1px solid #e2e8f0;
+            padding-bottom: 12px;
+            margin-bottom: 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .terminal-header .live-badge {
+            font-size: 11px;
+            background: #dcfce7;
+            color: #166534;
+            padding: 2px 8px;
+            border-radius: 12px;
+            animation: pulse 2s infinite;
+        }
+        .terminal-body {
+            flex: 1;
+            overflow-y: auto;
+            font-family: inherit;
+            font-size: 13px;
+            padding-right: 8px;
+        }
+        /* Custom scrollbar for terminal */
+        .terminal-body::-webkit-scrollbar { width: 6px; }
+        .terminal-body::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 4px; }
+        .terminal-body::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        
+        .term-line {
+            display: flex;
+            margin-bottom: 10px;
+            line-height: 1.6;
+            gap: 12px;
+            padding-bottom: 10px;
+            border-bottom: 1px dashed #f1f5f9;
+        }
+        .term-line:last-child {
+            border-bottom: none;
+        }
+        .term-time { color: #94a3b8; min-width: 140px; font-variant-numeric: tabular-nums; }
+        .term-user { color: #0f172a; font-weight: 700; min-width: 100px; }
+        .term-action { min-width: 160px; }
+        .term-desc { color: #475569; flex: 1; }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
     </style>
 </head>
 <body>
@@ -60,11 +136,6 @@
                class="{{ request()->routeIs('admin.users') ? 'active' : '' }}">
                 Users
             </a>
-
-            <a href="{{ route('admin.pomodoro') }}"
-               class="{{ request()->routeIs('admin.pomodoro') ? 'active' : '' }}">
-                Pomodoro
-            </a>
         </nav>
     </aside>
 
@@ -72,7 +143,7 @@
     <main class="main">
         <!-- HEADER -->
         <div class="header">
-            <h1>Welcome Dashboard!</h1>
+            <h1>Dashboard</h1>
             <div class="admin-session">
                 <span class="admin-name">
                     Login sebagai: <strong>{{ $adminName }}</strong>
@@ -99,18 +170,35 @@
             </div>
         </section>
 
-        <!-- TABLE -->
+        <!-- CCTV & TERMINAL GRID -->
+        <section class="monitoring-grid">
+            <!-- TERMINAL LOGS -->
+            <div class="terminal-card">
+                <div class="terminal-header">
+                    <span>Aktivitas Sistem Terbaru</span>
+                    <span class="live-badge">● LIVE AUTO-SYNC</span>
+                </div>
+                <div class="terminal-body" id="terminal-body">
+                    <div class="term-line">
+                        <span class="term-desc" style="color: #64748b;">Menunggu aktivitas log terbaru...</span>
+                    </div>
+                </div>
+            </div>
+
+        </section>
+
+        <!-- TABLE (Optional: if you still want the clean table) -->
         <section class="table-card">
-            <h3>Latest Sessions</h3>
+            <h3>Recent Activity</h3>
 
             <table>
                 <thead>
                     <tr>
                         <th>ID</th>
                         <th>User</th>
-                        <th>Sesi</th>
-                        <th>Durasi</th>
-                        <th>Tanggal</th>
+                        <th>Aksi</th>
+                        <th>Keterangan</th>
+                        <th>Waktu</th>
                     </tr>
                 </thead>
                 <tbody id="latest-sessions-body">

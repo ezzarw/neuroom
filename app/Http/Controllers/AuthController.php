@@ -4,6 +4,9 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\RegisterUserRequest;
 use App\Models\User;
+use App\Services\ActivityLogger;
+use App\Services\AuthService;
+use App\Services\UserService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -37,7 +40,7 @@ class AuthController extends Controller
         ];
     }
 
-    public function register(RegisterUserRequest $request)
+    public function register(RegisterUserRequest $request, UserService $userService)
     {
         if ($request->user() !== null) {
             return $this->apiError('Session aktif sudah ada.', 409);
@@ -46,7 +49,7 @@ class AuthController extends Controller
         $display_name = $request->username;
         $email = $request->email;
         $hashed_password = Hash::make($request->password);
-        $unique_username = $this->generateUniqueUsername($request->username);
+        $unique_username = $userService->generateUniqueUsername($request->username);
 
         $auth = User::create([
                 'username' => $unique_username,
@@ -59,6 +62,8 @@ class AuthController extends Controller
 
         Auth::guard($this->statefulSessionGuard())->login($auth);
         $request->session()->regenerate();
+
+        ActivityLogger::log($auth->id, 'register', "User mendaftar dengan username {$auth->username}");
 
         return $this->apiSuccess(
             'Register berhasil. Selamat datang.',
@@ -95,31 +100,22 @@ class AuthController extends Controller
         Auth::guard($this->statefulSessionGuard())->login($auth);
         $request->session()->regenerate();
 
+        ActivityLogger::log($auth->id, 'login', "User login");
+
         return $this->apiSuccess(
             'Login berhasil.',
-            $this->transformAuthenticatedUser($auth)
+            $this->transformAuthenticatedUser($auth),
+            200,
+            ['redirect_to' => $auth->is_admin ? '/admin' : '/utama']
         );
     }
 
-    public function logout(Request $request)
+    public function logout(Request $request, AuthService $authService)
     {
         $user_id = Auth::id();
-        $redis_keys = Redis::keys("user:$user_id:*");
-        
-        
-        
-        if (!empty($redis_keys)) {
-            $redis_keys_parsed = [];
-            foreach ($redis_keys as $perkey) {
-                $arr_temporary = explode(':', $perkey);
-                $arr_temporary[0] = 'user';
-                $arr_to_str = implode(':', $arr_temporary);
-                
-                $redis_keys_parsed[] = $arr_to_str;
-            }
-
-
-            Redis::del($redis_keys_parsed);
+        if ($user_id) {
+            $authService->clearUserRedisKeys($user_id);
+            ActivityLogger::log($user_id, 'logout', "User logout");
         }
         
         Auth::guard($this->statefulSessionGuard())->logout();

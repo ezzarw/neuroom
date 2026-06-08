@@ -16,14 +16,15 @@
         <h2 class="logo">Neuroom Admin</h2>
 
         <nav class="nav">
-            <a href="{{ route('admin.dashboard') }}">Dashboard</a>
+            <a href="{{ route('admin.dashboard') }}"
+               class="{{ request()->routeIs('admin.dashboard') ? 'active' : '' }}">
+                Dashboard
+            </a>
 
             <a href="{{ route('admin.users') }}"
                class="{{ request()->routeIs('admin.users') ? 'active' : '' }}">
                 Users
             </a>
-
-            <a href="{{ route('admin.pomodoro') }}">Pomodoro</a>
         </nav>
     </aside>
 

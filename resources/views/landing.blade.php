@@ -14,14 +14,16 @@
 <body>
     <div id="page-feedback" style="display:none; max-width: 1100px; margin: 16px auto 0; padding: 12px 16px; border-radius: 12px; font-weight: 600;"></div>
 
-    <!-- NAVBAR -->
-    <!-- NAVBAR -->
 <nav class="navbar navbar-landing">
   <div class="container nav-content">
 
     <div class="logo">Neuroom</div>
 
-    <ul class="nav-menu">
+    <button class="hamburger" id="landingHamburgerBtn" type="button" aria-label="Toggle menu">
+      <span></span><span></span><span></span>
+    </button>
+
+    <ul class="nav-menu" id="landingNavMenu">
       <li><a href="/">Beranda</a></li>
       <li><a href="#login-popup" data-target="/belajar">Belajar</a></li>
       <li><a href="#login-popup" data-target="/fokus">Fokus</a></li>
@@ -40,7 +42,7 @@
                 <h1>Ubah Materi Jadi Lebih Mudah Dipahami</h1>
                 <p>
                     Upload materi belajar dan dapatkan rangkuman,
-                    catatan otomatis, kuis evaluasi, serta mode fokus
+                    catatan otomatis, serta mode fokus
                     dalam satu platform pintar.
                 </p>
                 <a href="#login-popup" class="btn-primary">Mulai Belajar</a>
@@ -62,7 +64,7 @@
                     <div class="step-number">1</div>
                     <div class="step-content">
                         <h3>Upload Materi</h3>
-                        <p>Unggah file PDF, DOCX, atau PPT yang ingin kamu pelajari.</p>
+                        <p>Unggah file PDF, TXT, atau gambar yang ingin kamu pelajari.</p>
                     </div>
                 </div>
 
@@ -72,7 +74,7 @@
                     <div class="step-number">2</div>
                     <div class="step-content">
                         <h3>AI Memproses Materi</h3>
-                        <p>Sistem AI akan membuat rangkuman, catatan otomatis, dan kuis.</p>
+                        <p>Sistem AI akan membuat rangkuman, catatan otomatis.</p>
                     </div>
                 </div>
 
@@ -97,7 +99,7 @@
             <div class="features">
                 <div class="card">AI Rangkuman Materi</div>
                 <div class="card">Catatan Otomatis & Manual</div>
-                <div class="card">Kuis Otomatis & Evaluasi</div>
+                <div class="card">Catatan & Ringkasan</div>
                 <div class="card">Mode Fokus (Pomodoro)</div>
             </div>
         </div>
@@ -127,10 +129,10 @@
             <div class="footer-links">
                 <h4>Produk</h4>
                 <ul>
-                    <li><a href="#">AI Rangkuman</a></li>
-                    <li><a href="#">Kuis Otomatis</a></li>
-                    <li><a href="#">Mode Fokus</a></li>
-                    <li><a href="#">Latihan IT</a></li>
+                    <li><a href="/belajar">AI Rangkuman</a></li>
+                    <li><a href="/belajar">Catatan Otomatis</a></li>
+                    <li><a href="/fokus">Mode Fokus</a></li>
+                    <li><a href="/belajar">Latihan IT</a></li>
                 </ul>
             </div>
 
@@ -156,19 +158,13 @@
 
             <form method="POST" action="/api/v1/auth/login" id="login-form">
                 @csrf
-                <input type="email" placeholder="Email" name="email" required>
-                <div class="password-wrapper">
-                    <input type="password" placeholder="Password" name="password" required class="password-input">
-                    <button type="button" class="password-toggle" aria-label="Toggle password visibility">
-                        <svg class="eye-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-                            <circle cx="12" cy="12" r="3"></circle>
-                        </svg>
-                        <svg class="eye-closed-icon" style="display:none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
-                            <line x1="1" y1="1" x2="23" y2="23"></line>
-                        </svg>
-                    </button>
+                <input type="email" placeholder="Email" name="email" autocomplete="email" required>
+                <div class="password-field">
+                    <input type="password" placeholder="Password" name="password" id="login-password" autocomplete="current-password" required>
+                    <span class="toggle-pw" onclick="togglePassword('login-password', this)">Lihat</span>
+                </div>
+                <div style="text-align: right; margin: -8px 0 14px; font-size: 13px;">
+                    <a href="#lupapassword-popup" style="color: #5FA8A3; text-decoration: none;">Lupa Password?</a>
                 </div>
                 <button type="submit" class="btn-primary full" id="login-submit">Login</button>
             </form>
@@ -179,6 +175,22 @@
             </p>
         </div>
     </div>
+
+<!-- LUPA PASSWORD POPUP -->
+<div id="lupapassword-popup" class="popup-overlay">
+    <div class="popup-card">
+        <a href="#" class="popup-close">&times;</a>
+        <h2>Lupa Password</h2>
+        <p class="popup-desc">Fitur reset password belum aktif di aplikasi ini.</p>
+        <form>
+            <input type="email" placeholder="Email" name="email" autocomplete="email" required>
+            <button type="button" class="btn-primary full">Kirim Tautan Reset</button>
+        </form>
+        <p class="popup-footer">
+            Ingat password? <a href="#login-popup">Login</a>
+        </p>
+    </div>
+</div>
 
     <!-- POPUP REGISTER -->
     <div id="register-popup" class="popup-overlay">
@@ -191,20 +203,15 @@
 
             <form method="POST" action="/api/v1/auth/register" id="register-form">
                 @csrf
-                <input type="text" placeholder="Nama Lengkap" name="username" required>
-                <input type="email" placeholder="Email" name="email" required>
-                <div class="password-wrapper">
-                    <input type="password" placeholder="Password" name="password" required class="password-input">
-                    <button type="button" class="password-toggle" aria-label="Toggle password visibility">
-                        <svg class="eye-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-                            <circle cx="12" cy="12" r="3"></circle>
-                        </svg>
-                        <svg class="eye-closed-icon" style="display:none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
-                            <line x1="1" y1="1" x2="23" y2="23"></line>
-                        </svg>
-                    </button>
+                <input type="text" placeholder="Nama Lengkap" name="username" autocomplete="name" required>
+                <input type="email" placeholder="Email" name="email" autocomplete="email" required>
+                <div class="password-field">
+                    <input type="password" placeholder="Password" name="password" id="reg-password" autocomplete="new-password" required>
+                    <span class="toggle-pw" onclick="togglePassword('reg-password', this)">Lihat</span>
+                </div>
+                <div class="password-field">
+                    <input type="password" placeholder="Konfirmasi Password" name="password_confirmation" id="reg-password-confirm" autocomplete="new-password" required>
+                    <span class="toggle-pw" onclick="togglePassword('reg-password-confirm', this)">Lihat</span>
                 </div>
                 <button type="submit" class="btn-primary full" id="register-submit">Daftar</button>
             </form>
@@ -234,6 +241,22 @@
     <!-- SCRIPT -->
     <script src="{{ asset('js/stateful-api.js') }}" defer></script>
     <script src="{{ asset('js/landing-auth.js') }}" defer></script>
+    <script>
+        function togglePassword(fieldId, el) {
+            var input = document.getElementById(fieldId);
+            if (input.type === "password") {
+                input.type = "text";
+                el.textContent = "Tutup";
+            } else {
+                input.type = "password";
+                el.textContent = "Lihat";
+            }
+        }
+
+        document.getElementById('landingHamburgerBtn')?.addEventListener('click', function () {
+            document.getElementById('landingNavMenu')?.classList.toggle('show');
+        });
+    </script>
 </body>
 
 </html>

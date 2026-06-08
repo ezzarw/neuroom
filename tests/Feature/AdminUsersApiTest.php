@@ -31,7 +31,7 @@ class AdminUsersApiTest extends TestCase
         $create = $this->postJson('/api/v1/admin/users', [
             'username' => 'member baru',
             'email' => 'member@example.com',
-            'password' => 'password123',
+            'password' => 'Password123',
         ]);
 
         $create->assertCreated()

@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StoreUserFromAdminRequest;
 use App\Models\PomodoroHistory;
 use App\Models\User;
+use App\Models\ActivityLog;
+use App\Services\ActivityLogger;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -122,6 +124,26 @@ class AdminController extends Controller
         );
     }
 
+    public function monitoringLogs()
+    {
+        $logs = ActivityLog::with('user:id,username,display_name')
+            ->latest()
+            ->limit(100)
+            ->get()
+            ->map(function ($log) {
+                return [
+                    'id' => $log->id,
+                    'user_id' => $log->user_id,
+                    'username' => $log->user ? $log->user->username : 'System/Guest',
+                    'action' => $log->action,
+                    'description' => $log->description,
+                    'created_at' => $this->formatDateTime($log->created_at),
+                ];
+            });
+
+        return $this->apiSuccess('Log monitoring berhasil diambil.', $logs->all());
+    }
+
     public function index()
     {
         $users = $this->baseUsersQuery()
@@ -153,6 +175,8 @@ class AdminController extends Controller
                 'profile_picture' => null,
             ]);
         });
+
+        ActivityLogger::log(auth()->id(), 'admin_create_user', "Admin membuat user baru: {$uniqueUsername}");
 
         return $this->apiSuccess(
             'User berhasil ditambahkan.',
@@ -194,6 +218,8 @@ class AdminController extends Controller
 
         $updated = $user->fresh();
 
+        ActivityLogger::log(auth()->id(), 'admin_update_user', "Admin mengubah data user: {$updated->username}");
+
         return $this->apiSuccess(
             'User berhasil diupdate.',
             $this->transformUserRow($updated)
@@ -202,7 +228,10 @@ class AdminController extends Controller
 
     public function destroy(User $user)
     {
+        $username = $user->username;
         $user->delete();
+
+        ActivityLogger::log(auth()->id(), 'admin_delete_user', "Admin menghapus user: {$username}");
 
         return $this->apiSuccess('User berhasil dihapus.');
     }

@@ -1,211 +1,139 @@
-# Neuroom - README DevOps
+# Neuroom
 
-Panduan ini fokus ke setup dan operasional Neuroom di environment lokal, staging, dan production.
+Neuroom adalah platform manajemen waktu belajar yang mengintegrasikan teknik Pomodoro, pencatatan (Notes), dan peringkasan materi berbasis Artificial Intelligence (Gemini AI). Dibangun dengan arsitektur modern menggunakan Laravel 12 (Stateful API), Redis untuk performa realtime, dan Reverb untuk WebSockets.
 
-Dokumentasi teknis:
+## 🌟 Fitur Utama
 
-- Endpoint: `docs/ENDPOINT.md`
-- Backend: `docs/PANDUAN_BACKEND.md`
-- Frontend: `docs/PANDUAN_FRONTEND_VALIDATION.md`
-- Standar JSON API: `docs/API_RESPONSE_JSON.md`
-- Catatan keamanan operasional: `docs/TUGAS_BIAR_AMAN.md`
+- **Pomodoro Timer**: Manajemen waktu fokus dengan notifikasi realtime (WebSockets).
+- **AI Summarization**: Ringkas dokumen belajar secara otomatis menggunakan Google Gemini AI.
+- **Smart Notes**: Catat hasil belajar dengan dukungan pencarian cepat (Laravel Scout).
+- **Live Monitoring Dashboard**: Panel admin bergaya modern untuk melacak aktivitas pengguna secara realtime (`/admin`).
+- **Stateful API**: Interaksi halus dan aman ala Single Page Application (SPA) tanpa JWT overhead, mengandalkan proteksi CSRF & Cookie bawaan Sanctum.
 
-## Ringkasan Arsitektur
+---
 
-- Backend: Laravel 12
-- Frontend: Blade + JavaScript fetch helper
-- Database utama: MySQL / MariaDB
-- Session dan cache: Redis
-- API dinamis: `/api/v1/...`
-- Autentikasi: session guard `web`
-- Queue worker: Laravel queue
-- Web server: Nginx + `php-fpm` direkomendasikan
+## 🏗️ Arsitektur Sistem
 
-Catatan produk:
+- **Backend Framework**: Laravel 12
+- **Frontend**: Blade + Vanilla JS (Fetch API Helper)
+- **Database Utama**: MySQL / MariaDB (Persistensi)
+- **In-Memory Store**: Redis (Sesi, Cache, Pomodoro State Buffer)
+- **WebSockets**: Laravel Reverb (Real-time Broadcast)
+- **Autentikasi**: Laravel Sanctum (Stateful Cookie-based)
 
-- landing page memuat login dan register
-- halaman utama tetap dirender Blade
-- data interaktif frontend mengambil JSON dari `/api/v1`
+### 📂 Struktur Direktori Penting
+- `app/Services/`: Berisi logika bisnis utama (`PomodoroService`, `AuthService`, `UserService`, `ActivityLogger`) yang dipisahkan dari Controller (Clean Code).
+- `public/js/stateful-api.js`: Helper JavaScript utama yang menangani pengiriman request API yang aman berserta penyisipan CSRF Token.
+- `docs/`: Dokumentasi internal mendetail terkait API.
 
-## Dependency Sistem
+---
 
-### Wajib
+## 🚀 Panduan Setup Lokal
 
-- `php` 8.2+ beserta extension:
-  - `bcmath`
-  - `ctype`
-  - `fileinfo`
-  - `json`
-  - `mbstring`
-  - `openssl`
-  - `pdo`
-  - `pdo_mysql`
-  - `tokenizer`
-  - `xml`
-- `composer`
-- `mysql` atau MariaDB kompatibel
-- `redis` server
-- `nodejs` 18+ dan `npm`
-- `git`
+### 1. Kebutuhan Sistem (Prerequisites)
+Pastikan lingkungan pengembangan Anda telah memiliki:
+- PHP 8.2+ (ext: bcmath, ctype, fileinfo, json, mbstring, openssl, pdo_mysql, tokenizer, xml)
+- Composer
+- Node.js 18+ & NPM
+- MySQL / MariaDB Server
+- Redis Server (Wajib berjalan di background)
 
-Untuk menjalankan test bawaan yang memakai SQLite in-memory, extension `pdo_sqlite` juga dibutuhkan.
-
-## Setup Pertama Kali
-
-1. Install dependency backend:
-
+### 2. Instalasi Proyek
+Klon repositori dan install dependensi:
 ```bash
+git clone <repo-url>
+cd neuroom
 composer install
+npm install
 ```
 
-2. Siapkan environment:
-
+### 3. Konfigurasi Lingkungan
+Duplikat file konfigurasi dan atur kredensial Anda:
 ```bash
 cp .env.example .env
 php artisan key:generate
 ```
-
-3. Atur DB di `.env`:
-
+Edit file `.env` yang baru dibuat:
 ```env
+# Konfigurasi Database
 DB_CONNECTION=mysql
 DB_HOST=127.0.0.1
 DB_PORT=3306
 DB_DATABASE=neuroom
-DB_USERNAME=neuroom_user
-DB_PASSWORD=your_password
-```
+DB_USERNAME=root
+DB_PASSWORD=
 
-4. Jika ingin memakai fitur summary AI, isi:
-
-```env
-GEMINI_API_KEY=your_key
-```
-
-5. Session dan cache sekarang default ke Redis. Pastikan Redis aktif, lalu set env berikut:
-
-```env
+# Konfigurasi Redis (WAJIB)
 SESSION_DRIVER=redis
-SESSION_CONNECTION=default
 CACHE_STORE=redis
 REDIS_CLIENT=predis
 REDIS_HOST=127.0.0.1
 REDIS_PORT=6379
-REDIS_DB=0
-REDIS_CACHE_DB=1
+
+# Integrasi AI (Wajib untuk fitur Summarize)
+GEMINI_API_KEY=your_gemini_key
 ```
 
-6. Jalankan migration:
-
+### 4. Migrasi & Seeding
+Bangun skema database (termasuk tabel `activity_logs` untuk monitoring admin):
 ```bash
 php artisan migrate
 ```
+*(Opsional)* Jalankan seeder jika ada untuk data dummy.
 
-7. Install dependency frontend:
+### 5. Menjalankan Aplikasi
+Buka beberapa terminal untuk menjalankan service yang berbeda:
 
-```bash
-npm install
-```
-
-8. Jalankan build atau dev server asset:
-
-```bash
-npm run build
-# atau
-npm run dev
-```
-
-## Menjalankan Aplikasi
-
-### Mode cepat
-
-```bash
-composer run dev
-```
-
-### Mode manual
-
-Terminal 1:
-
+**Terminal 1 (PHP Server):**
 ```bash
 php artisan serve
 ```
-
-Terminal 2:
-
+**Terminal 2 (Vite Asset Bundler):**
 ```bash
 npm run dev
 ```
-
-Terminal 3 bila queue dipakai:
-
+**Terminal 3 (Opsional - Queue Worker):**
 ```bash
-php artisan queue:listen --tries=1
+php artisan queue:listen
 ```
 
-## Debugging dan Verifikasi
+Aplikasi kini dapat diakses melalui `http://127.0.0.1:8000`.
 
-Cek route:
+---
 
-```bash
-php artisan route:list
-php artisan route:list --path=api/v1
-```
+## 🛡️ Standar Pengujian (Testing)
+Proyek ini dilengkapi dengan Feature dan Unit Testing. Karena menggunakan SQLite in-memory untuk testing, pastikan ekstensi `pdo_sqlite` aktif di `php.ini`.
 
-Jalankan syntax check cepat:
-
-```bash
-php -l routes/api.php
-php -l bootstrap/app.php
-```
-
-Jalankan test:
-
+Jalankan test suite dengan:
 ```bash
 php artisan test
 ```
 
-Catatan:
+---
 
-- test API saat ini butuh driver SQLite untuk mode in-memory, kecuali konfigurasi test DB diubah
+## 🚢 Panduan Deployment (Production)
 
-## Deploy Production
+1. Pastikan server produksi memiliki PHP, Nginx, MySQL, dan Redis.
+2. Ambil kode terbaru dan instal dependensi produksi:
+   ```bash
+   composer install --no-dev --optimize-autoloader
+   npm ci
+   npm run build
+   ```
+3. Sesuaikan file `.env` untuk production (`APP_ENV=production`, `APP_DEBUG=false`).
+4. Eksekusi migrasi secara aman:
+   ```bash
+   php artisan migrate --force
+   ```
+5. Optimasi cache Laravel untuk performa maksimal:
+   ```bash
+   php artisan config:cache
+   php artisan route:cache
+   php artisan view:cache
+   ```
+6. Pastikan Redis berjalan dengan stabil dan arahkan Document Root web server ke folder `/public`.
 
-1. Pull source code terbaru.
-2. Install dependency backend tanpa package dev:
+---
 
-```bash
-composer install --no-dev --optimize-autoloader
-```
-
-3. Siapkan `.env` production.
-4. Jalankan migration:
-
-```bash
-php artisan migrate --force
-```
-
-5. Build asset:
-
-```bash
-npm ci
-npm run build
-```
-
-6. Optimasi cache Laravel:
-
-```bash
-php artisan config:cache
-php artisan route:cache
-php artisan view:cache
-```
-
-7. Restart service terkait.
-
-## Catatan Operasional
-
-- arahkan docroot ke folder `public/`
-- jangan commit `.env`
-- samakan versi PHP CLI dan web server
-- monitor `storage/logs/laravel.log`
-- kalau route atau kontrak API berubah, sinkronkan frontend dengan `/api/v1`
+## 👨‍💻 Admin Panel
+Admin dapat memantau log aktivitas secara *real-time* dengan mengakses rute `/admin` setelah login dengan kredensial ber-hak akses `is_admin = 1`. Panel ini mengusung desain yang bersih, minimalis, dan informatif.

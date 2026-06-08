@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StoreNoteRequest;
 use App\Http\Requests\UpdateNoteRequest;
 use App\Models\Note;
+use App\Services\ActivityLogger;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -82,6 +83,8 @@ class NoteController extends Controller
             ...$request->validated(),
         ]);
 
+        ActivityLogger::log(Auth::id(), 'create_note', "User membuat catatan: {$note->title}");
+
         return $this->apiSuccess(
             'Catatan berhasil dibuat.',
             $this->transformNote($note),
@@ -126,6 +129,8 @@ class NoteController extends Controller
         $note->update($request->validated());
         $note->refresh();
 
+        ActivityLogger::log(Auth::id(), 'update_note', "User mengubah catatan: {$note->title}");
+
         return $this->apiSuccess(
             'Catatan berhasil diupdate.',
             $this->transformNote($note)
@@ -146,7 +151,10 @@ class NoteController extends Controller
             return $this->apiError('Catatan tidak ditemukan.', 404);
         }
 
+        $noteTitle = $note->title;
         $note->delete();
+
+        ActivityLogger::log(Auth::id(), 'delete_note', "User menghapus catatan: {$noteTitle}");
 
         return $this->apiSuccess('Catatan berhasil dihapus.');
     }

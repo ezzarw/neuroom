@@ -51,5 +51,6 @@ Route::prefix('v1')->group(function () {
         Route::put('/users/{user}', [AdminController::class, 'update']);
         Route::delete('/users/{user}', [AdminController::class, 'destroy']);
         Route::get('/pomodoro', [AdminController::class, 'pomodoroSessions']);
+        Route::get('/monitoring', [AdminController::class, 'monitoringLogs']);
     });
 });

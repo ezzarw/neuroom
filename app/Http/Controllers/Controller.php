@@ -9,13 +9,19 @@ use Illuminate\Support\Str;
 
 abstract class Controller
 {
-    protected function apiSuccess(string $reason, array $data = [], int $status = 200): JsonResponse
+    protected function apiSuccess(string $reason, array $data = [], int $status = 200, array $meta = []): JsonResponse
     {
-        return response()->json([
+        $response = [
             'success' => true,
             'reason' => $reason,
             'data' => $data,
-        ], $status);
+        ];
+
+        if (!empty($meta)) {
+            $response['meta'] = $meta;
+        }
+
+        return response()->json($response, $status);
     }
 
     protected function apiError(string $reason, int $status = 400, array $errors = []): JsonResponse

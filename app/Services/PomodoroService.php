@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Events\PomodoroStateChanged;
 use App\Models\PomodoroHistory;
+use App\Services\ActivityLogger;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Redis;
 use Illuminate\Support\Str;
@@ -89,6 +90,8 @@ class PomodoroService
             ]);
         }
 
+        ActivityLogger::log($user->id, 'start_pomodoro', "User memulai sesi pomodoro ($type) selama $duration detik");
+
         return $this->startNewSession(
             user: $user,
             duration: $duration,
@@ -104,6 +107,7 @@ class PomodoroService
         bool $autoStartBreak = true,
         bool $autoStartFocus = false,
     ): array {
+        ActivityLogger::log($user->id, 'start_break', "User memulai istirahat selama $duration detik");
         return $this->start(
             user: $user,
             duration: $duration,
@@ -119,6 +123,7 @@ class PomodoroService
         bool $autoStartBreak = true,
         bool $autoStartFocus = false,
     ): array {
+        ActivityLogger::log($user->id, 'start_long_break', "User memulai istirahat panjang selama $duration detik");
         return $this->start(
             user: $user,
             duration: $duration,
@@ -163,6 +168,8 @@ class PomodoroService
         );
 
         event(new PomodoroStateChanged($user->id, $payload));
+
+        ActivityLogger::log($user->id, 'pause_pomodoro', "User menjeda pomodoro pada sisa waktu $remaining detik");
 
         return $payload;
     }
@@ -209,6 +216,8 @@ class PomodoroService
 
         event(new PomodoroStateChanged($user->id, $payload));
 
+        ActivityLogger::log($user->id, 'resume_pomodoro', "User melanjutkan pomodoro dengan sisa waktu $remaining detik");
+
         return $payload;
     }
 
@@ -250,6 +259,8 @@ class PomodoroService
             remaining: $remaining,
             endedAt: $now
         );
+
+        ActivityLogger::log($user->id, 'stop_pomodoro', "User menghentikan pomodoro dengan durasi aktual: {$actualSeconds} detik");
 
         Redis::del($key);
 
@@ -310,6 +321,8 @@ class PomodoroService
             remaining: 0,
             endedAt: $now
         );
+
+        ActivityLogger::log($user->id, 'finish_pomodoro', "User menyelesaikan pomodoro secara penuh: {$duration} detik");
 
         Redis::del($key);
 

@@ -32,6 +32,7 @@ Route::middleware('auth')->group(function () {
     Route::view('/pomodoro', 'pomodoro')->name('pomodoro');
     Route::view('/utama', 'utama')->name('utama');
     Route::view('/profile', 'profile')->name('profile');
+    Route::post('/logout', [App\Http\Controllers\AuthController::class, 'logout'])->name('logout');
 
 });
 
@@ -46,10 +47,7 @@ Route::middleware(['auth', 'admin.validate'])->group(function () {
 
     Route::view('/admin', 'admin.dashboard')->name('admin.dashboard');
 
-    Route::get('/admin/users', [AdminController::class, 'usersPage'])
-        ->name('admin.users');
-
-    Route::view('/admin/pomodoro', 'admin.pomodoro')->name('admin.pomodoro');
+    Route::view('/admin/users', 'admin.users')->name('admin.users');
 
     Route::get('/dashboard', fn() => redirect()->route('admin.dashboard'))
         ->name('dashboard');

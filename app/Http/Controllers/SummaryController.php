@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreSummaryRequest;
 use App\Models\Note;
+use App\Services\ActivityLogger;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Redis;
@@ -68,7 +69,8 @@ class SummaryController extends Controller
         $user_id = Auth::id();
         Redis::set("user:$user_id:summary", $output);
         
-        
+        ActivityLogger::log($user_id, 'generate_summary', "User membuat ringkasan materi: {$document->getClientOriginalName()}");
+
         return $this->apiSuccess('Ringkasan berhasil dibuat.', [
             'status' => 'success',
             'output' => $output,
@@ -106,6 +108,7 @@ class SummaryController extends Controller
         // delete hasil rangkuman terbaru (soalnya udah terupload agar data tidak double)
         Redis::del("user:$user_id:summary");
 
+        ActivityLogger::log($user_id, 'save_summary_to_note', "User menyimpan ringkasan materi ke catatan");
 
         return $this->apiSuccess('Rangkuman berhasil diupload ke catatan.', 
             $payload

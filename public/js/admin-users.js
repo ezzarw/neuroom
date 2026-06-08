@@ -67,7 +67,7 @@ function renderUsers(users) {
 async function loadUsers() {
   try {
     const response = await window.NeuroomApi.request('/api/v1/admin/users');
-    usersCache = response.data?.users || [];
+    usersCache = Array.isArray(response.data) ? response.data : [];
     renderUsers(usersCache);
   } catch (error) {
     setResult(error.message || 'Gagal memuat user.', true);
@@ -111,14 +111,14 @@ createForm?.addEventListener('submit', async (event) => {
       data: payload,
     });
 
-    setResult(response.message || 'User berhasil ditambahkan.');
+    setResult(response.reason || 'User berhasil ditambahkan.');
     closeModal(createModal);
     createForm.reset();
     await loadUsers();
   } catch (error) {
     const message = error.payload?.errors
       ? Object.values(error.payload.errors).flat()[0]
-      : error.message;
+      : (error.payload?.reason || error.message);
     setResult(message || 'Gagal menambah user.', true);
   }
 });
@@ -140,14 +140,14 @@ editForm?.addEventListener('submit', async (event) => {
       data: payload,
     });
 
-    setResult(response.message || 'User berhasil diupdate.');
+    setResult(response.reason || 'User berhasil diupdate.');
     closeModal(editModal);
     editForm.reset();
     await loadUsers();
   } catch (error) {
     const message = error.payload?.errors
       ? Object.values(error.payload.errors).flat()[0]
-      : error.message;
+      : (error.payload?.reason || error.message);
     setResult(message || 'Gagal mengubah user.', true);
   }
 });
@@ -180,10 +180,10 @@ usersTableBody?.addEventListener('click', async (event) => {
       const response = await window.NeuroomApi.request(`/api/v1/admin/users/${user.id}`, {
         method: 'DELETE',
       });
-      setResult(response.message || 'User berhasil dihapus.');
+      setResult(response.reason || 'User berhasil dihapus.');
       await loadUsers();
     } catch (error) {
-      setResult(error.message || 'Gagal menghapus user.', true);
+      setResult(error.payload?.reason || error.message || 'Gagal menghapus user.', true);
     }
   }
 });
