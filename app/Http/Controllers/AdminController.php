@@ -229,10 +229,16 @@ class AdminController extends Controller
     public function destroy(User $user)
     {
         $username = $user->username;
+
+        // Hapus data terkait sebelum hapus user (foreign key constraint)
+        $user->notes()->delete();
+        $user->pomodoroHistories()->delete();
+
+        // ActivityLogger akan otomatis nullOnDelete
         $user->delete();
 
         ActivityLogger::log(auth()->id(), 'admin_delete_user', "Admin menghapus user: {$username}");
 
-        return $this->apiSuccess('User berhasil dihapus.');
+        return $this->apiSuccess("User {$username} berhasil dihapus beserta data terkait.");
     }
 }

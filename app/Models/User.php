@@ -30,4 +30,9 @@ class User extends Authenticatable
     {
         return $this->hasMany(PomodoroHistory::class);
     }
+
+    public function notes(): HasMany
+    {
+        return $this->hasMany(\App\Models\Note::class);
+    }
 }
