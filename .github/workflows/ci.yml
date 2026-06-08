@@ -43,6 +43,9 @@ jobs:
       - name: Copy .env
         run: php -r "file_exists('.env') || copy('.env.example', '.env');"
 
+      - name: Update Composer Lock
+        run: composer update --lock --no-interaction
+
       - name: Install Composer Dependencies
         run: composer install -q --no-ansi --no-interaction --no-scripts --no-progress --prefer-dist
 
