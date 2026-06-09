@@ -112,6 +112,7 @@ class AuthController extends Controller
 
     public function logout(Request $request, AuthService $authService)
     {
+        $redirectTo = route('landing', [], false);
         $user_id = Auth::id();
         if ($user_id) {
             $authService->clearUserRedisKeys($user_id);
@@ -122,9 +123,15 @@ class AuthController extends Controller
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 
+        if (! $request->expectsJson()) {
+            return redirect($redirectTo);
+        }
+
         return $this->apiSuccess(
             'Logout berhasil.',
-            []
+            [],
+            200,
+            ['redirect_to' => $redirectTo]
         );
     }
 
